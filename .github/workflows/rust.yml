@@ -14,6 +14,12 @@ jobs:
     name: Linting
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: "andromedaprotocol/localrelayer.git"
+          token: ${{ secrets.LOCALRELAYER_ACCESS_TOKEN  }}
+          path: "localrelayer"
+
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
