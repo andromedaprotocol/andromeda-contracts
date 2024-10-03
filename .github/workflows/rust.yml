@@ -86,13 +86,14 @@ jobs:
     name: Running E2E Test
     needs: build
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          repository: "andromedaprotocol/localrelayer.git"
+          token: ${{ secrets.LOCALRELAYER_ACCESS_TOKEN  }}
       - name: Setup localrelayer
         run: |
-          git clone --branch develop git@github.com:andromedaprotocol/localrelayer.git ./localrelayer
           cd ./localrelayer
+          git checkout develop
           make start-chains CHAINS="terra-1"
           make start-validators CHAINS="terra-1"
 
