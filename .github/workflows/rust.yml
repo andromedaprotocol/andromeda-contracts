@@ -99,7 +99,10 @@ jobs:
           docker-compose --version
       - name: Setup localrelayer
         run: |
+          ls
           cd ./localrelayer
+          ls
+          git branch
           git checkout develop
           make start-chains CHAINS="terra-1"
           make start-validators CHAINS="terra-1"
