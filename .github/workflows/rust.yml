@@ -14,12 +14,6 @@ jobs:
     name: Linting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: "andromedaprotocol/localrelayer.git"
-          token: ${{ secrets.LOCALRELAYER_ACCESS_TOKEN  }}
-          path: "localrelayer"
-
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
@@ -93,9 +87,16 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          repository: "andromedaprotocol/localrelayer.git"
-          token: ${{ secrets.LOCALRELAYER_ACCESS_TOKEN  }}
+          repository: andromedaprotocol/localrelayer
+          token: ${{ secrets.LOCALRELAYER_ACCESS_TOKEN }}
+          path: localrelayer
+      - name: Setup docker
+        run: |
+          curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
       - name: Setup localrelayer
         run: |
           cd ./localrelayer
@@ -103,10 +104,22 @@ jobs:
           make start-chains CHAINS="terra-1"
           make start-validators CHAINS="terra-1"
 
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.75.0
+      - run: rustup override set 1.75.0
+      - run: rustup target add wasm32-unknown-unknown
+      - name: Install Binaryen
+        run: |
+          chmod +x "${GITHUB_WORKSPACE}/ci-scripts/install_binaryen.sh"
+          "${GITHUB_WORKSPACE}/ci-scripts/install_binaryen.sh" all
+
       - name: Run IBC Tests
         run: |
-          cd ./ibc-tests
-          cargo test -- --show-output
+          chmod +x "${GITHUB_WORKSPACE}/build.sh"
+          "${GITHUB_WORKSPACE}/build.sh" all
+          ls
+          cargo test -p ibc-tests -- --test-threads 1
 
   build-schemas:
     runs-on: ubuntu-latest
