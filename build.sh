@@ -21,7 +21,7 @@ build_contract () {
 
     local CONTRACT=`basename $CONTRACT_PATH`;
     echo "Building contract $CONTRACT..."
-    if ! cargo wasm -p $CONTRACT; then
+    if ! cargo wasm -p $CONTRACT -q; then
         exit 1
     fi
 
@@ -84,7 +84,7 @@ is_category() {
     return 1
 }
 
-export RUSTFLAGS="-C link-arg=-s"
+# export RUSTFLAGS="-C link-arg=-s"
 
 #Clear current builds
 rm -rf ./target
