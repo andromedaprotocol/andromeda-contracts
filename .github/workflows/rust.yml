@@ -29,7 +29,6 @@ jobs:
 
   contract-tests:
     name: Contract Tests
-    needs: linting
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
