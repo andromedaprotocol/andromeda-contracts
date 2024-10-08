@@ -21,7 +21,7 @@ build_contract () {
 
     local CONTRACT=`basename $CONTRACT_PATH`;
     echo "Building contract $CONTRACT..."
-    if ! cargo wasm -p $CONTRACT -q; then
+    if ! cargo wasm -p $CONTRACT; then
         exit 1
     fi
 
