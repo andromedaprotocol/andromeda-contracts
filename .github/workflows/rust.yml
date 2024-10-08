@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 1
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.75.0
+          toolchain: 1.78.0
           components: rustfmt, clippy
           profile: minimal
           override: true
@@ -40,7 +40,7 @@ jobs:
           fetch-depth: 1
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.75.0
+          toolchain: 1.78.0
           profile: minimal
       - run: cargo fetch --verbose
       - run: cargo build
@@ -58,8 +58,8 @@ jobs:
     steps:
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.75.0
-      - run: rustup override set 1.75.0
+          toolchain: 1.78.0
+      - run: rustup override set 1.78.0
       - run: rustup target add wasm32-unknown-unknown
       - uses: actions/checkout@v2
       - name: Install Binaryen
@@ -109,8 +109,8 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.75.0
-      - run: rustup override set 1.75.0
+          toolchain: 1.78.0
+      - run: rustup override set 1.78.0
       - run: rustup target add wasm32-unknown-unknown
       - name: Install Binaryen
         run: |
