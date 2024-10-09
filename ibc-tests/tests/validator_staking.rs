@@ -40,6 +40,7 @@ pub const LOCAL_TERRA: ChainInfo = ChainInfo {
 };
 
 #[test]
+#[ignore]
 fn test_validator_staking() {
     let local_terra = LOCAL_TERRA;
     let daemon = Daemon::builder(local_terra.clone()) // set the network to use
@@ -114,6 +115,7 @@ fn test_validator_staking() {
 }
 
 #[test]
+#[ignore]
 fn test_kicked_validator() {
     // Pause validator before running this test
     let local_terra = LOCAL_TERRA;
