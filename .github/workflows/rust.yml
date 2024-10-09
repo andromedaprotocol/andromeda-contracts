@@ -99,6 +99,7 @@ jobs:
           docker-compose --version
       - name: Setup localrelayer
         run: |
+          ls
           cd ./localrelayer
           make start-chains
           make start-validators

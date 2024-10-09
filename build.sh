@@ -84,7 +84,7 @@ is_category() {
     return 1
 }
 
-export RUSTFLAGS="-C link-arg=-s"
+# export RUSTFLAGS="-C link-arg=-s"
 
 #Clear current builds
 rm -rf ./target
