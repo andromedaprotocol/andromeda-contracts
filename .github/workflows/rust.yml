@@ -117,6 +117,7 @@ jobs:
       - name: Download Artifacts To andromeda testing
         uses: actions/download-artifact@v3
         with:
+          name: contracts
           path: ./packages/andromeda-testing-e2e/artifacts
 
       - name: Display Download artifacts
