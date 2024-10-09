@@ -18,7 +18,7 @@ macro_rules! contract_interface {
 
             fn wasm(_chain: &ChainInfoOwned) -> WasmPath {
                 artifacts_dir_from_workspace!()
-                    .find_wasm_path($wasm_path)
+                    .find_wasm_path(&format!("andromeda_{}.wasm", $wasm_path))
                     .unwrap()
             }
         }
