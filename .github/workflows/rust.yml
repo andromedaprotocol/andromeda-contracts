@@ -119,14 +119,14 @@ jobs:
           path: ./packages/andromeda-testing-e2e/artifacts
 
       - name: Display Download artifacts
-        run: ls ./ibc-tests/artifacts/
+        run: ls ./ibc-tests/artifacts/ -R
       - name: Run IBC Tests
         run: |
           cargo test -p ibc-tests -- --test-threads 1
   build-schemas:
     runs-on: ubuntu-latest
     name: Actions - build schemas
-    needs: contract-tests
+    needs: ibc-tests
     steps:
       - uses: actions/checkout@v2
       - name: Build Schema
