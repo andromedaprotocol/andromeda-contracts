@@ -108,18 +108,18 @@ jobs:
           toolchain: 1.75.0
           profile: minimal
       - name: Display structure of current workflow
-        run: ls -R
+        run: ls
       - name: Download Artifacts To ibc-tests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           path: ./ibc-tests/artifacts
       - name: Download Artifacts To andromeda testing
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           path: ./packages/andromeda-testing-e2e/artifacts
 
       - name: Display Download artifacts
-        run: ./ibc-tests/artifacts/
+        run: ls ./ibc-tests/artifacts/
       - name: Run IBC Tests
         run: |
           cargo test -p ibc-tests -- --test-threads 1
