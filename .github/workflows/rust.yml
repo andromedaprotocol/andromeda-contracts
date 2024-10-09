@@ -112,6 +112,7 @@ jobs:
       - name: Download Artifacts To ibc-tests
         uses: actions/download-artifact@v3
         with:
+          name: contracts
           path: ./ibc-tests/artifacts
       - name: Download Artifacts To andromeda testing
         uses: actions/download-artifact@v3
