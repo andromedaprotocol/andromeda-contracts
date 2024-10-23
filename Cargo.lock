@@ -686,6 +686,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "andromeda-system-current-block"
+version = "1.0.0"
+dependencies = [
+ "andromeda-std",
+ "andromeda-systems",
+ "andromeda-testing",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw20",
+]
+
+[[package]]
+name = "andromeda-systems"
+version = "1.0.0"
+dependencies = [
+ "andromeda-std",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-utils 1.0.3",
+ "cw721 0.18.0",
+ "cw721-base 0.18.0",
+ "serde",
+]
+
+[[package]]
 name = "andromeda-testing"
 version = "1.0.0"
 dependencies = [

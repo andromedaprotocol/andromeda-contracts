@@ -28,6 +28,8 @@ pub const MOCK_CW20_CONTRACT: &str = "cw20_contract";
 pub const MOCK_ANCHOR_CONTRACT: &str = "anchor_contract";
 /// Mock App Contract Address
 pub const MOCK_APP_CONTRACT: &str = "app_contract";
+/// Mock System ADO Address
+pub const MOCK_SYSTEM_CONTRACT: &str = "system_contract";
 /// Mock Primitive Contract Address
 pub const MOCK_PRIMITIVE_CONTRACT: &str = "primitive_contract";
 /// Mock Kernel Contract Address
@@ -233,6 +235,7 @@ impl MockAndromedaQuerier {
                 }
                 let mut resp = ContractInfoResponse::default();
                 resp.code_id = match contract_addr.as_str() {
+                    MOCK_SYSTEM_CONTRACT => 4,
                     MOCK_APP_CONTRACT => 3,
                     INVALID_CONTRACT => 2,
                     _ => 1,
@@ -561,7 +564,11 @@ impl MockAndromedaQuerier {
             // let app_contract_key = String::from_utf8(3u64.to_be_bytes().to_vec()).unwrap();
             // let generic_contract_key = String::from_utf8(1u64.to_be_bytes().to_vec()).unwrap();
             if let Some(key) = key {
-                if key == "3" {
+                if key == "4" {
+                    SystemResult::Ok(ContractResult::Ok(
+                        to_json_binary("system-contract").unwrap(),
+                    ))
+                } else if key == "3" {
                     SystemResult::Ok(ContractResult::Ok(to_json_binary("app-contract").unwrap()))
                 } else if key == "1" {
                     SystemResult::Ok(ContractResult::Ok(to_json_binary("ADOType").unwrap()))

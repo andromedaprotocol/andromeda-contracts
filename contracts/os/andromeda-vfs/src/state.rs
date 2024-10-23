@@ -1,7 +1,7 @@
 use andromeda_std::{
     amp::AndrAddr,
     error::ContractError,
-    os::vfs::{validate_path_name, SubDirBound},
+    os::vfs::{validate_path_name, SubDirBound, SubSystemBound},
 };
 use cosmwasm_std::{ensure, Addr, Api, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Map, MultiIndex};
@@ -44,6 +44,50 @@ pub fn paths<'a>() -> IndexedMap<'a, &'a (Addr, String), PathInfo, PathIndices<'
         ),
     };
     IndexedMap::new("path", indexes)
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct SystemAdoPathInfo {
+    pub name: String,
+    pub address: Addr,
+    pub root: String,
+    pub symlink: Option<AndrAddr>,
+}
+
+pub struct SystemAdoPathIndices<'a> {
+    /// PK: root + system_ado_name
+    /// Secondary key: address
+    pub address: MultiIndex<'a, Addr, SystemAdoPathInfo, (String, String)>,
+
+    /// PK: root + system_ado_name
+    /// Secondary key: root
+    pub root: MultiIndex<'a, String, SystemAdoPathInfo, (String, String)>,
+}
+
+impl<'a> IndexList<SystemAdoPathInfo> for SystemAdoPathIndices<'a> {
+    fn get_indexes(
+        &'_ self,
+    ) -> Box<dyn Iterator<Item = &'_ dyn cw_storage_plus::Index<SystemAdoPathInfo>> + '_> {
+        let v: Vec<&dyn Index<SystemAdoPathInfo>> = vec![&self.address, &self.root];
+        Box::new(v.into_iter())
+    }
+}
+
+pub fn system_ado_paths<'a>(
+) -> IndexedMap<'a, &'a (String, String), SystemAdoPathInfo, SystemAdoPathIndices<'a>> {
+    let indexes = SystemAdoPathIndices {
+        address: MultiIndex::new(
+            |_pk: &[u8], r| r.address.clone(),
+            "system_ado_path",
+            "path_index",
+        ),
+        root: MultiIndex::new(
+            |_pk: &[u8], r| r.root.clone(),
+            "system_ado_path",
+            "root_index",
+        ),
+    };
+    IndexedMap::new("system_ado_path", indexes)
 }
 
 pub const USERS: Map<&str, Addr> = Map::new("users");
@@ -90,7 +134,9 @@ pub fn resolve_pathname(
         match pathname.get_root_dir() {
             "home" => resolve_home_path(storage, api, pathname, resolved_paths),
             "lib" => resolve_lib_path(storage, api, pathname, resolved_paths),
-            &_ => Err(ContractError::InvalidAddress {}),
+            // "chain" => resolve_system_path(storage, api, pathname, resolved_paths),
+            // &_ => Err(ContractError::InvalidAddress {}),
+            &_ => resolve_system_path(storage, api, pathname, resolved_paths),
         }
     } else {
         Ok(api.addr_validate(pathname.as_str())?)
@@ -154,6 +200,36 @@ fn resolve_lib_path(
     let mut remaining_parts = parts.to_vec();
     remaining_parts.drain(0..2);
     resolve_path(storage, api, remaining_parts, lib_address, resolved_paths)
+}
+
+/**
+   Resolves a given system path.
+
+    * **storage**: CosmWasm storage struct
+    * **api**: CosmWasm API struct
+    * **path**: The full path to be resolved
+    * **resolved_paths**: A vector of resolved paths to prevent looping or paths that are too long
+*/
+fn resolve_system_path(
+    storage: &dyn Storage,
+    api: &dyn Api,
+    path: AndrAddr,
+    resolved_paths: &mut Vec<(Addr, String)>,
+) -> Result<Addr, ContractError> {
+    let parts = split_pathname(path.to_string());
+
+    let root = path.get_root_dir();
+    let system_ado_name = parts[1].as_str();
+
+    let info =
+        system_ado_paths().load(storage, &(root.to_string(), system_ado_name.to_string()))?;
+
+    let address = match info.symlink {
+        Some(symlink) => resolve_pathname(storage, api, symlink, resolved_paths)?,
+        None => info.address,
+    };
+
+    Ok(address)
 }
 
 const MAX_DEPTH: u8 = 50;
@@ -238,6 +314,33 @@ pub fn get_subdir(
     Ok(subdirs)
 }
 
+pub fn get_subsystem(
+    storage: &dyn Storage,
+    root: String,
+    min: Option<SubSystemBound>,
+    max: Option<SubSystemBound>,
+    limit: Option<u32>,
+) -> Result<Vec<SystemAdoPathInfo>, ContractError> {
+    // let address = resolve_pathname(storage, api, root.clone(), &mut vec![])?;
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT);
+
+    let subsystems = system_ado_paths()
+        .idx
+        .root
+        .prefix(root.to_string())
+        .range(
+            storage,
+            min.map(Bound::inclusive),
+            max.map(Bound::inclusive),
+            cosmwasm_std::Order::Ascending,
+        )
+        .take(limit as usize)
+        .map(|r| r.unwrap().1)
+        .collect();
+
+    Ok(subsystems)
+}
+
 pub fn get_paths(storage: &dyn Storage, addr: Addr) -> Result<Vec<String>, ContractError> {
     let mut resolved_paths: Vec<String> = vec![];
     let parent_dirs: Vec<PathInfo> = paths()
@@ -264,6 +367,24 @@ pub fn get_paths(storage: &dyn Storage, addr: Addr) -> Result<Vec<String>, Contr
     Ok(resolved_paths)
 }
 
+pub fn get_system_paths(storage: &dyn Storage, addr: Addr) -> Result<Vec<String>, ContractError> {
+    let mut resolved_paths: Vec<String> = vec![];
+    let all_info: Vec<SystemAdoPathInfo> = system_ado_paths()
+        .idx
+        .address
+        .prefix(addr.clone())
+        .range(storage, None, None, cosmwasm_std::Order::Ascending)
+        .map(|r| r.unwrap().1)
+        .collect();
+    for info in all_info {
+        let root = info.root;
+        let name = info.name;
+        resolved_paths.push(format!("/{root}/{name}"));
+    }
+
+    Ok(resolved_paths)
+}
+
 pub fn add_pathname(
     storage: &mut dyn Storage,
     parent_addr: Addr,
@@ -277,6 +398,25 @@ pub fn add_pathname(
             name,
             address,
             parent_address: parent_addr,
+            symlink: None,
+        },
+    )?;
+    Ok(())
+}
+
+pub fn add_system_ado_path_name(
+    storage: &mut dyn Storage,
+    root: String,
+    name: String,
+    address: Addr,
+) -> Result<(), ContractError> {
+    system_ado_paths().save(
+        storage,
+        &(root.clone(), name.clone()),
+        &SystemAdoPathInfo {
+            name,
+            address,
+            root,
             symlink: None,
         },
     )?;
@@ -586,6 +726,36 @@ mod test {
         )
         .unwrap();
         assert_eq!(res, file_address)
+    }
+
+    #[test]
+    fn test_resolve_system_path() {
+        let mut deps = mock_dependencies();
+        let root = "etc";
+        let system_ado_name = "aos_version";
+        let system_ado_address = Addr::unchecked("systemadoaddress");
+
+        system_ado_paths()
+            .save(
+                deps.as_mut().storage,
+                &(root.to_string(), system_ado_name.to_string()),
+                &SystemAdoPathInfo {
+                    name: system_ado_name.to_string(),
+                    address: system_ado_address.clone(),
+                    root: root.to_string(),
+                    symlink: None,
+                },
+            )
+            .unwrap();
+
+        let res = resolve_system_path(
+            deps.as_ref().storage,
+            deps.as_ref().api,
+            AndrAddr::from_string(format!("/{root}/{system_ado_name}")),
+            &mut vec![],
+        )
+        .unwrap();
+        assert_eq!(res, system_ado_address);
     }
 
     #[test]

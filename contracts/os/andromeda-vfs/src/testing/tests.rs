@@ -1,6 +1,9 @@
 use crate::{
     contract::{execute, instantiate, query},
-    state::{add_pathname, resolve_pathname, PathInfo, ADDRESS_LIBRARY, ADDRESS_USERNAME, USERS},
+    state::{
+        add_pathname, resolve_pathname, PathInfo, SystemAdoPathInfo, ADDRESS_LIBRARY,
+        ADDRESS_USERNAME, USERS,
+    },
 };
 
 use andromeda_std::{
@@ -11,7 +14,7 @@ use andromeda_std::{
     },
     testing::mock_querier::{
         mock_dependencies_custom, MOCK_APP_CONTRACT, MOCK_FAKE_KERNEL_CONTRACT,
-        MOCK_KERNEL_CONTRACT,
+        MOCK_KERNEL_CONTRACT, MOCK_SYSTEM_CONTRACT,
     },
 };
 use andromeda_std::{error::ContractError, os::vfs::QueryMsg};
@@ -554,7 +557,7 @@ fn test_add_child() {
     )
     .unwrap();
 
-    assert_eq!(resolved_addr, sender)
+    assert_eq!(resolved_addr, Addr::unchecked(sender))
 }
 
 #[test]
@@ -608,6 +611,44 @@ fn test_override_add_child() {
     // This will error, user_two is trying to add his address as identifier for /user_one/identifier vfs path
     let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
     assert_eq!(res, ContractError::Unauthorized {});
+}
+
+#[test]
+fn test_add_system_ado_path() {
+    let mut deps = mock_dependencies_custom(&[]);
+    let system_ado_name = "system_ado";
+    let sender = MOCK_SYSTEM_CONTRACT;
+    let root = "etc";
+    let info = mock_info(sender, &[]);
+    let env = mock_env();
+    let msg = ExecuteMsg::AddSystemAdoPath {
+        name: system_ado_name.to_string(),
+        root: root.to_string(),
+    };
+
+    execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+
+    // If the same system ADO is already exists, it returns an error
+    let err_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap_err();
+
+    assert_eq!(
+        err_res,
+        ContractError::CustomError {
+            msg: "System ADO already exists".to_string(),
+        }
+    );
+
+    let path = format!("/etc/{system_ado_name}");
+
+    let resolved_addr = resolve_pathname(
+        deps.as_ref().storage,
+        deps.as_ref().api,
+        AndrAddr::from_string(path.clone()),
+        &mut vec![],
+    )
+    .unwrap();
+
+    assert_eq!(resolved_addr, Addr::unchecked(sender))
 }
 
 #[test]
@@ -762,6 +803,66 @@ fn test_get_subdir() {
 }
 
 #[test]
+fn test_get_subsystems() {
+    let mut deps = mock_dependencies_custom(&[]);
+    let system_ado_name1 = "system_ado1";
+    let system_ado_name2 = "system_ado2";
+    let sender1 = "system_contract1";
+    let sender2 = "system_contract2";
+    let root = "etc";
+    let info1 = mock_info(sender1, &[]);
+    let info2 = mock_info(sender2, &[]);
+    let env = mock_env();
+    let msg = ExecuteMsg::AddSystemAdoPath {
+        name: system_ado_name1.to_string(),
+        root: root.to_string(),
+    };
+
+    execute(deps.as_mut(), env.clone(), info1.clone(), msg).unwrap();
+
+    let msg = ExecuteMsg::AddSystemAdoPath {
+        name: system_ado_name2.to_string(),
+        root: root.to_string(),
+    };
+
+    execute(deps.as_mut(), env.clone(), info2.clone(), msg).unwrap();
+
+    let sub_systems = vec![
+        SystemAdoPathInfo {
+            name: system_ado_name1.to_string(),
+            address: Addr::unchecked(sender1),
+            root: root.to_string(),
+            symlink: None,
+        },
+        SystemAdoPathInfo {
+            name: system_ado_name2.to_string(),
+            address: Addr::unchecked(sender2),
+            root: root.to_string(),
+            symlink: None,
+        },
+    ];
+
+    let query_msg = QueryMsg::SubSystem {
+        root: root.to_string(),
+        min: None,
+        max: None,
+        limit: None,
+    };
+
+    let res = query(deps.as_ref(), env, query_msg).unwrap();
+    let val: Vec<SystemAdoPathInfo> = from_json(res).unwrap();
+
+    // Sort the vectors to ensure consistent ordering
+    let mut val_sorted = val.clone();
+    val_sorted.sort_by(|a, b| a.name.cmp(&b.name));
+
+    let mut sub_systems_sorted = sub_systems.clone();
+    sub_systems_sorted.sort_by(|a, b| a.name.cmp(&b.name));
+
+    assert_eq!(val_sorted, sub_systems_sorted);
+}
+
+#[test]
 fn test_get_paths() {
     let mut deps = mock_dependencies();
     let username = "u1";
@@ -839,4 +940,70 @@ fn test_get_paths() {
     let res = query(deps.as_ref(), env, query_msg).unwrap();
     let val: Vec<String> = from_json(res).unwrap();
     assert_eq!(val.len(), 2);
+}
+
+#[test]
+fn test_get_system_paths() {
+    let mut deps = mock_dependencies_custom(&[]);
+    let system_ado_name1 = "system_ado1";
+    let system_ado_name2 = "system_ado2";
+    let sender = "system_contract";
+    let root1 = "etc";
+    let root2 = "chain";
+    let info = mock_info(sender, &[]);
+    let env = mock_env();
+    let msg = ExecuteMsg::AddSystemAdoPath {
+        name: system_ado_name1.to_string(),
+        root: root1.to_string(),
+    };
+
+    execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    let msg = ExecuteMsg::AddSystemAdoPath {
+        name: system_ado_name2.to_string(),
+        root: root2.to_string(),
+    };
+
+    execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    let system_paths = vec![
+        format!("/{root1}/{system_ado_name1}"),
+        format!("/{root2}/{system_ado_name2}"),
+    ];
+
+    let query_msg = QueryMsg::SystemPaths {
+        addr: Addr::unchecked(sender),
+    };
+
+    let res = query(deps.as_ref(), env, query_msg).unwrap();
+    let val: Vec<String> = from_json(res).unwrap();
+
+    // Sort the vectors to ensure consistent ordering
+    let mut val_sorted = val.clone();
+    val_sorted.sort();
+
+    let mut system_paths_sorted = system_paths.clone();
+    system_paths_sorted.sort();
+
+    assert_eq!(val_sorted, system_paths_sorted);
+
+    let res1 = resolve_pathname(
+        deps.as_ref().storage,
+        deps.as_ref().api,
+        AndrAddr::from_string(format!("/{root1}/{system_ado_name1}")),
+        vec![].as_mut(),
+    )
+    .unwrap();
+
+    assert_eq!(res1, Addr::unchecked(sender));
+
+    let res2 = resolve_pathname(
+        deps.as_ref().storage,
+        deps.as_ref().api,
+        AndrAddr::from_string(format!("/{root2}/{system_ado_name2}")),
+        vec![].as_mut(),
+    )
+    .unwrap();
+
+    assert_eq!(res2, Addr::unchecked(sender));
 }

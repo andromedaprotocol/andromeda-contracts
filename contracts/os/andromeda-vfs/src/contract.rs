@@ -75,6 +75,9 @@ pub fn execute(
             name,
             parent_address,
         } => execute::add_child(execute_env, name, parent_address),
+        ExecuteMsg::AddSystemAdoPath { name, root } => {
+            execute::add_system_ado_path(execute_env, name, root)
+        }
         ExecuteMsg::RegisterLibrary {
             lib_name,
             lib_address,
@@ -107,7 +110,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             max,
             limit,
         } => encode_binary(&query::subdir(deps, path, min, max, limit)?),
+        QueryMsg::SubSystem {
+            root,
+            min,
+            max,
+            limit,
+        } => encode_binary(&query::subsystem(deps, root, min, max, limit)?),
         QueryMsg::Paths { addr } => encode_binary(&query::paths(deps, addr)?),
+        QueryMsg::SystemPaths { addr } => encode_binary(&query::system_paths(deps, addr)?),
         QueryMsg::GetUsername { address } => encode_binary(&query::get_username(deps, address)?),
         QueryMsg::GetLibrary { address } => encode_binary(&query::get_library_name(deps, address)?),
         QueryMsg::ResolveSymlink { path } => encode_binary(&query::get_symlink(deps, path)?),

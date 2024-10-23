@@ -1,0 +1,24 @@
+
+*** These modified files were found in JOE when it aborted on Wed Sep 25 08:34:44 2024
+*** JOE was aborted by UNIX signal 1
+
+*** File '/home/paperspace/WorkSpace/rust/perf/system-current-block/.git/MERGE_MSG'
+Merge branch 'development' of https://github.com/andromedaprotocol/andromeda-core into mdjakovic/system-current-block
+# Please enter a commit message to explain why this merge is necessary,
+# especially if it merges an updated upstream into a topic branch.
+#
+# Lines starting with '#' will be ignored, and an empty message aborts
+# the commit.
+
+*** File '(Unnamed)'
+/home/paperspace/WorkSpace/MiniCPM-V/.git/COMMIT_EDITMSG
+* Startup Log *
+* Shell 2 *
+/home/paperspace/WorkSpace/rust/perf/system-ados/.git/MERGE_MSG
+/home/paperspace/WorkSpace/rust/perf/system-current-block/.git/MERGE_MSG
+
+*** File '* Startup Log *'
+Processing '/etc/joe/editorrc'...
+Processing '/etc/joe/ftyperc'...
+Finished processing /etc/joe/ftyperc
+Finished processing /etc/joe/editorrc

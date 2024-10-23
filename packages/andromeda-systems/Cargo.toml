@@ -1,0 +1,24 @@
+[package]
+name = "andromeda-systems"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.75.0"
+description = "Utility methods and message definitions for the Andromeda System Level ADOs"
+license = "MIT"
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cosmwasm-schema = { workspace = true }
+serde = { version = "1.0.127", default-features = false, features = ["derive"] }
+cw-utils = { workspace = true }
+cw721 = { workspace = true }
+cw721-base = { workspace = true }
+
+andromeda-std = { workspace = true, features = ["rates"] }

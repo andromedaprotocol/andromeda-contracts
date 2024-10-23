@@ -9,6 +9,7 @@ members = [
     "contracts/finance/*",
     # "contracts/automation/*",
     "contracts/modules/*",
+    "contracts/systems/*",
     "contracts/os/*",
 
     #Internal
@@ -37,6 +38,7 @@ andromeda-data-storage = { path = "./packages/andromeda-data-storage", version =
 andromeda-modules = { path = "./packages/andromeda-modules", version = "2.0.0" }
 andromeda-app = { path = "./packages/andromeda-app", version = "1.0.0" }
 andromeda-ecosystem = { path = "./packages/andromeda-ecosystem", version = "1.0.0" }
+andromeda-systems = { path = "./packages/andromeda-systems", version = "1.0.0" }
 andromeda-testing = { path = "./packages/andromeda-testing", version = "1.0.0" }
 andromeda-testing-e2e = { path = "./packages/andromeda-testing-e2e", version = "1.0.0" }
 

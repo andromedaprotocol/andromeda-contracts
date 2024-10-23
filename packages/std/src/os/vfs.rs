@@ -6,7 +6,8 @@ use regex::Regex;
 pub const COMPONENT_NAME_REGEX: &str = r"^[A-Za-z0-9.\-_]{2,80}$";
 pub const USERNAME_REGEX: &str = r"^[a-z0-9]{2,30}$";
 
-pub const PATH_REGEX: &str = r"^(~[a-z0-9]{2,}|/(lib|home))(/[A-Za-z0-9.\-_]{2,80}?)*(/)?$";
+pub const PATH_REGEX: &str =
+    r"^(~[a-z0-9]{2,}|/(lib|home|[a-z0-9-_]{2,}))(/[A-Za-z0-9.\-_]{2,80}?)*(/)?$";
 pub const PROTOCOL_PATH_REGEX: &str = r"^((([A-Za-z0-9]+://)?([A-Za-z0-9.\-_]{2,80}/)))?((~[a-z0-9]{2,}|(lib|home))(/[A-Za-z0-9.\-_]{2,80}?)*(/)?)$";
 
 pub fn convert_component_name(path: &str) -> String {
@@ -168,6 +169,13 @@ pub enum ExecuteMsg {
         name: String,
         parent_address: AndrAddr,
     },
+    // Registers a system ADO, currently only accessible by a registered admin
+    AddSystemAdoPath {
+        #[schemars(regex = "COMPONENT_NAME_REGEX")]
+        name: String,
+        #[schemars(regex = "COMPONENT_NAME_REGEX")]
+        root: String,
+    },
     RegisterUser {
         #[schemars(regex = "USERNAME_REGEX", length(min = 3, max = 30))]
         username: String,
@@ -198,6 +206,17 @@ impl From<SubDirBound> for (Addr, String) {
 }
 
 #[cw_serde]
+pub struct SubSystemBound {
+    root: String,
+    name: String,
+}
+impl From<SubSystemBound> for (String, String) {
+    fn from(val: SubSystemBound) -> Self {
+        (val.root, val.name)
+    }
+}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(Addr)]
@@ -209,8 +228,17 @@ pub enum QueryMsg {
         max: Option<SubDirBound>,
         limit: Option<u32>,
     },
+    #[returns(Vec<PathDetails>)]
+    SubSystem {
+        root: String,
+        min: Option<SubSystemBound>,
+        max: Option<SubSystemBound>,
+        limit: Option<u32>,
+    },
     #[returns(Vec<String>)]
     Paths { addr: Addr },
+    #[returns(Vec<String>)]
+    SystemPaths { addr: Addr },
     #[returns(String)]
     GetUsername { address: Addr },
     #[returns(String)]
@@ -375,6 +403,16 @@ mod test {
     fn test_validate_path_name() {
         let test_cases: Vec<ValidatePathNameTestCase> = vec![
             ValidatePathNameTestCase {
+                name: "System ADO path 1",
+                path: "/etc/aos_version",
+                should_err: false,
+            },
+            ValidatePathNameTestCase {
+                name: "System ADO path 2",
+                path: "/chain/current_block",
+                should_err: false,
+            },
+            ValidatePathNameTestCase {
                 name: "Simple app path",
                 path: "./username/app",
                 should_err: true,
@@ -415,21 +453,23 @@ mod test {
                 path: "~/home/username",
                 should_err: true,
             },
-            ValidatePathNameTestCase {
-                name: "Invalid user path",
-                path: "/user/un",
-                should_err: true,
-            },
+            // // It is disable becasue system ado path
+            // ValidatePathNameTestCase {
+            //     name: "Invalid user path",
+            //     path: "/user/un",
+            //     should_err: true,
+            // },
             ValidatePathNameTestCase {
                 name: "Valid user path",
                 path: "/home/usr",
                 should_err: false,
             },
-            ValidatePathNameTestCase {
-                name: "Invalid home path (address)",
-                path: "/user/cosmos1abcde",
-                should_err: true,
-            },
+            // // It is disable becasue system ado path
+            // ValidatePathNameTestCase {
+            //     name: "Invalid home path (address)",
+            //     path: "/user/cosmos1abcde",
+            //     should_err: true,
+            // },
             ValidatePathNameTestCase {
                 name: "Valid home path (address)",
                 path: "/home/cosmos1abcde",

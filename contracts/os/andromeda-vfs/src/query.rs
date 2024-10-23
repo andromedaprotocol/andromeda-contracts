@@ -1,10 +1,10 @@
-use andromeda_std::os::vfs::{validate_path_name, SubDirBound};
+use andromeda_std::os::vfs::{validate_path_name, SubDirBound, SubSystemBound};
 use andromeda_std::{amp::AndrAddr, error::ContractError};
 use cosmwasm_std::{Addr, Deps};
 
 use crate::state::{
-    get_paths, get_subdir, resolve_pathname, resolve_symlink, PathInfo, ADDRESS_LIBRARY,
-    ADDRESS_USERNAME,
+    get_paths, get_subdir, get_subsystem, get_system_paths, resolve_pathname, resolve_symlink,
+    PathInfo, SystemAdoPathInfo, ADDRESS_LIBRARY, ADDRESS_USERNAME,
 };
 
 pub fn resolve_path(deps: Deps, path: AndrAddr) -> Result<Addr, ContractError> {
@@ -22,8 +22,22 @@ pub fn subdir(
     get_subdir(deps.storage, deps.api, path, min, max, limit)
 }
 
+pub fn subsystem(
+    deps: Deps,
+    root: String,
+    min: Option<SubSystemBound>,
+    max: Option<SubSystemBound>,
+    limit: Option<u32>,
+) -> Result<Vec<SystemAdoPathInfo>, ContractError> {
+    get_subsystem(deps.storage, root, min, max, limit)
+}
+
 pub fn paths(deps: Deps, addr: Addr) -> Result<Vec<String>, ContractError> {
     get_paths(deps.storage, addr)
+}
+
+pub fn system_paths(deps: Deps, addr: Addr) -> Result<Vec<String>, ContractError> {
+    get_system_paths(deps.storage, addr)
 }
 
 pub fn get_symlink(deps: Deps, addr: AndrAddr) -> Result<AndrAddr, ContractError> {
