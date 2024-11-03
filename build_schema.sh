@@ -32,8 +32,20 @@ if [ ! -d "./artifacts" ]; then
     mkdir artifacts;
 fi;
 
+SKIP_GIT_DIFF=${SKIP_GIT_DIFF:-true}
+
+GIT_BASE_BRANCH=${GIT_BASE_BRANCH:-development}
+
 for directory in contracts/*/; do
     for contract in $directory/*/; do
+        if ! $SKIP_GIT_DIFF; then
+            if [[ -n $(git diff --merge-base $GIT_BASE_BRANCH --stat "$contract") ]]; then
+                echo "Changes detected in $(basename $contract). Building..."
+            else
+                echo "No changes in $(basename $contract). Skip schema build."
+                continue
+            fi
+        fi
         ( cd $contract && cargo schema )
         copy_schema $contract
     done

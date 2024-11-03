@@ -19,6 +19,15 @@ get_version_filename (){
 build_contract () {
     local CONTRACT_PATH=$1;
 
+    if ! $SKIP_GIT_DIFF; then
+        if [[ -n $(git diff --merge-base $GIT_BASE_BRANCH --stat "$CONTRACT_PATH") ]]; then
+            echo "Changes detected in $(basename $CONTRACT_PATH). Building..."
+        else
+            echo "No changes in $(basename $CONTRACT_PATH). Skipping build."
+            return 0
+        fi
+    fi
+
     local CONTRACT=`basename $CONTRACT_PATH`;
     echo "Building contract $CONTRACT..."
     if ! cargo wasm -p $CONTRACT -q; then
@@ -85,6 +94,10 @@ export RUSTFLAGS="-C link-arg=-s"
 rm -rf ./target
 rm -rf ./artifacts
 mkdir artifacts
+
+SKIP_GIT_DIFF=${SKIP_GIT_DIFF:-true}
+
+GIT_BASE_BRANCH=${GIT_BASE_BRANCH:-development}
 
 set -e
 for target in "$@"; do
