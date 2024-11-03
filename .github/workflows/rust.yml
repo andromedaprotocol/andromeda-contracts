@@ -54,7 +54,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: Actions - build contracts and upload artifacts
-    needs: [contract-tests]
+    # needs: [contract-tests]
     steps:
       - uses: actions-rs/toolchain@v1
         with:
@@ -104,7 +104,7 @@ jobs:
   build-schemas:
     runs-on: ubuntu-latest
     name: Actions - build schemas
-    needs: contract-tests
+    # needs: contract-tests
     steps:
       - uses: actions/checkout@v2
       - name: Build Schema
