@@ -20,7 +20,7 @@ build_contract () {
     local CONTRACT_PATH=$1;
 
     if ! $SKIP_GIT_DIFF; then
-        if [[ -n $(git diff $GIT_BASE_BRANCH...HEAD --stat "$CONTRACT_PATH") ]]; then
+        if [[ -n $(git diff $GIT_BASE_BRANCH... --stat "$CONTRACT_PATH") ]]; then
             echo "Changes detected in $(basename $CONTRACT_PATH). Building..."
         else
             echo "No changes in $(basename $CONTRACT_PATH). Skipping build."
