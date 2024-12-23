@@ -1,5 +1,7 @@
+use andromeda_deploy::build;
 use andromeda_deploy::report::DeploymentReport;
 use andromeda_deploy::slack::SlackNotification;
+use andromeda_deploy::validate;
 use std::env;
 
 use andromeda_deploy::adodb;
@@ -9,6 +11,10 @@ use dotenv::dotenv;
 fn main() {
     env_logger::init();
     dotenv().ok();
+
+    validate::run();
+
+    build::run();
 
     let chain = env::var("DEPLOYMENT_CHAIN").expect("DEPLOYMENT_CHAIN must be set");
     let mut kernel_address = env::var("DEPLOYMENT_KERNEL_ADDRESS").ok();
@@ -38,6 +44,7 @@ fn main() {
             .unwrap();
     }
 
+    let kernel_address = kernel_address.expect("Kernel address must be set or OS deployed");
     let contracts_to_deploy = env::var("DEPLOY_CONTRACTS")
         .ok()
         .unwrap_or_default()
@@ -53,7 +60,7 @@ fn main() {
 
     let adodb_res = adodb::deploy(
         chain.clone(),
-        kernel_address.clone().unwrap(),
+        kernel_address.clone(),
         Some(contracts_to_deploy),
     );
     if let Err(e) = adodb_res {
@@ -68,7 +75,7 @@ fn main() {
     DeploymentReport {
         chain_id: chain.clone(),
         contracts: deployed_contracts,
-        kernel_address: kernel_address.unwrap(),
+        kernel_address,
     }
     .write_to_json()
     .unwrap();

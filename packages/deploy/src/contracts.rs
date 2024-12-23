@@ -96,3 +96,10 @@ pub fn os_contracts() -> Vec<DeployableContract> {
         deployable!(IBCRegistryContract),
     ]
 }
+
+pub fn get_contract(contract_name: String) -> Option<DeployableContract> {
+    all_contracts()
+        .into_iter()
+        .chain(os_contracts())
+        .find(|(name, _, _)| *name == contract_name)
+}

@@ -20,6 +20,6 @@ pub fn get_chain(chain: String) -> ChainInfo {
     all_chains
         .iter()
         .find(|c| c.chain_id == chain || c.network_info.chain_name == chain)
-        .unwrap()
+        .unwrap_or_else(|| panic!("Chain {} not found", chain))
         .clone()
 }

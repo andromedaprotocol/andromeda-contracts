@@ -47,7 +47,7 @@ build_contract () {
 
 build_category () {
      for directory in contracts/*/; do
-        if [[ "$(basename $directory)" = "$1" ]]; then
+        if [ "$(basename $directory)" = "$1" ]; then
             echo "Building all contracts in category $(basename $directory)..."
             for contract in $directory/*/; do
                 build_contract $contract;
@@ -67,7 +67,7 @@ build_all() {
 is_contract() {
     for directory in contracts/*/; do
         for contract in $directory/*/; do
-            if [[ "$(basename $contract)" = "$1" ]]; then
+            if [ "$(basename $contract)" = "$1" ]; then
                 return 0
             fi
         done
@@ -77,7 +77,7 @@ is_contract() {
 
 is_category() {
     for directory in contracts/*/; do
-        if [[ "$(basename $directory)" = "$1" ]]; then
+        if [ "$(basename $directory)" = "$1" ]; then
             return 0
         fi
     done
@@ -97,7 +97,7 @@ mkdir ibc-tests/artifacts
 
 set -e
 for target in "$@"; do
-    if [[ "$target" = "all" ]]; then
+    if [ "$target" = "all" ]; then
         build_all
     elif is_contract $target; then
         build_contract $target

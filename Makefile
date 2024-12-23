@@ -30,12 +30,6 @@ build:
 	@./scripts/build_all.sh || exit 1
 	@echo "Build complete! \033[0;32m\xE2\x9C\x94\033[0m"
 
-# Builds all contracts and generates a version map
-build-arm:
-	@echo "Building all contracts..."
-	@./scripts/build_all_arm.sh || exit 1
-	@echo "Build complete! \033[0;32m\xE2\x9C\x94\033[0m"
-
 # Attaches contract versions to the wasm files
 attach-contract-versions:
 	@echo "Attaching contract versions..."
