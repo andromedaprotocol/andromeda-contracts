@@ -2,7 +2,7 @@ use super::mock::{
     error_initialization, proper_initialization, query_curve_config, query_plot_y_from_x, reset,
     update_curve_config,
 };
-use andromeda_math::curve::{CurveConfig, CurveType};
+use andromeda_math::curve::{CurveConfig, CurveType, QueryMsg};
 use andromeda_std::{amp::AndrAddr, error::ContractError};
 use cosmwasm_std::StdError;
 use test_case::test_case;
@@ -183,4 +183,22 @@ fn test_query_plot_y_from_x_base_2_decay(input_x: f64, expected_y: String) {
 
     let res = query_plot_y_from_x(deps.as_ref(), input_x).unwrap().y_value;
     assert_eq!(res, expected_y);
+}
+
+#[test]
+#[should_panic(expected = "entered unreachable code")]
+fn test_bad_query_in_contract() {
+    let (deps, _info) = proper_initialization(
+        CurveConfig::ExpConfig {
+            curve_type: CurveType::Growth,
+            base_value: 1,
+            multiple_variable_value: Some(1),
+            constant_value: Some(5),
+        },
+        None,
+    );
+
+    let res  = query_plot_y_from_x(deps.as_ref(), 3_f64).unwrap().y_value;
+
+    assert_eq!(res, "5");
 }

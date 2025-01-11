@@ -67,6 +67,7 @@ pub fn instantiate(
     )?;
 
     let campaign_config: CampaignConfig = msg.campaign_config;
+    deps.api.debug("fist one");
     let tiers: Vec<Tier> = msg.tiers.into_iter().collect();
     if let Asset::Cw20Token(addr) = campaign_config.denom.clone() {
         let addr = addr.get_raw_address(&deps.as_ref())?;
@@ -80,10 +81,12 @@ pub fn instantiate(
     }
 
     campaign_config.validate(deps.branch(), &env)?;
+    deps.api.debug("fist two");
     set_config(deps.storage, campaign_config)?;
 
     set_tiers(deps.storage, tiers)?;
 
+    deps.api.debug("fist third");
     Ok(inst_resp)
 }
 

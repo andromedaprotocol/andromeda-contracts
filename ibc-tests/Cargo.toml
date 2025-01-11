@@ -44,6 +44,7 @@ andromeda-validator-staking = { path = "../contracts/finance/andromeda-validator
     "testing",
 ] }
 
+
 andromeda-finance = { workspace = true }
 andromeda-std = { workspace = true }
 andromeda-app = { workspace = true }
@@ -52,3 +53,14 @@ andromeda-non-fungible-tokens = { workspace = true }
 cosmwasm-std = { workspace = true, features = ["staking"] }
 cw20.workspace = true
 cw721.workspace = true
+
+andromeda-kernel = { path = "../contracts/os/andromeda-kernel", features = ["testing"] }
+andromeda-adodb = { path = "../contracts/os/andromeda-adodb", features = ["testing"] }
+andromeda-vfs = { path = "../contracts/os/andromeda-vfs", features = ["testing"] }
+andromeda-economics = { path = "../contracts/os/andromeda-economics", features = ["testing"] }
+andromeda-ibc-registry = { path = "../contracts/os/andromeda-ibc-registry", features = ["testing"] }
+
+cw20-base = "1.1.1"
+
+[dev-dependencies]
+cw-multi-test = "0.16.5"
