@@ -984,6 +984,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "andromeda-time-gate"
+version = "0.2.0-beta.1"
+dependencies = [
+ "andromeda-app",
+ "andromeda-math",
+ "andromeda-std",
+ "andromeda-testing",
+ "cosmwasm-schema 1.5.8",
+ "cosmwasm-std 1.5.8",
+ "cw-multi-test",
+ "cw-orch",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+]
+
+[[package]]
 name = "andromeda-timelock"
 version = "2.0.3"
 dependencies = [
