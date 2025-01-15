@@ -15,7 +15,6 @@ use andromeda_std::{
     error::ContractError,
     testing::mock_querier::MOCK_KERNEL_CONTRACT,
 };
-use andromeda_testing::economics_msg::generate_economics_message;
 use cosmwasm_std::{
     coin, coins, from_json,
     testing::{mock_env, mock_info},
@@ -203,8 +202,7 @@ fn test_increase_incentives() {
     assert_eq!(
         Response::new()
             .add_attribute("action", "incentives_increased")
-            .add_attribute("amount", "100")
-            .add_submessage(generate_economics_message(MOCK_INCENTIVE_TOKEN, "Receive")),
+            .add_attribute("amount", "100"),
         res
     );
 
@@ -301,8 +299,7 @@ fn test_deposit_native() {
         Response::new()
             .add_attribute("action", "lock_native")
             .add_attribute("user", "sender")
-            .add_attribute("ust_deposited", "100")
-            .add_submessage(generate_economics_message("sender", "DepositNative")),
+            .add_attribute("ust_deposited", "100"),
         res
     );
 
@@ -419,8 +416,7 @@ fn test_withdraw_native() {
             })
             .add_attribute("action", "withdraw_native")
             .add_attribute("user", "sender")
-            .add_attribute("amount", "100")
-            .add_submessage(generate_economics_message("sender", "WithdrawNative")),
+            .add_attribute("amount", "100"),
         res
     );
 
@@ -701,9 +697,7 @@ fn test_enable_claims_no_bootstrap_specified() {
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
     assert_eq!(
-        Response::new()
-            .add_attribute("action", "enable_claims")
-            .add_submessage(generate_economics_message("sender", "EnableClaims")),
+        Response::new().add_attribute("action", "enable_claims"),
         res
     );
 
@@ -858,8 +852,7 @@ fn test_claim_rewards() {
                     amount: Uint128::new(75)
                 })
                 .unwrap()
-            })
-            .add_submessage(generate_economics_message("user1", "ClaimRewards")),
+            }),
         res
     );
 
@@ -897,8 +890,7 @@ fn test_claim_rewards() {
                     amount: Uint128::new(25)
                 })
                 .unwrap()
-            })
-            .add_submessage(generate_economics_message("user2", "ClaimRewards")),
+            }),
         res
     );
 

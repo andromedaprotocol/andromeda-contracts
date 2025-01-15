@@ -1,25 +1,22 @@
-use andromeda_std::amp::AndrAddr;
-use andromeda_std::common::expiration::Expiry;
-use andromeda_std::common::Milliseconds;
-use andromeda_std::testing::mock_querier::{mock_dependencies_custom, MOCK_KERNEL_CONTRACT};
+use andromeda_finance::weighted_splitter::{AddressWeight, ExecuteMsg, InstantiateMsg, Splitter};
 use andromeda_std::{
-    ado_base::InstantiateMsg as BaseInstantiateMsg, ado_contract::ADOContract,
-    amp::recipient::Recipient, error::ContractError,
+    ado_base::InstantiateMsg as BaseInstantiateMsg,
+    ado_contract::ADOContract,
+    amp::{recipient::Recipient, AndrAddr},
+    common::{expiration::Expiry, Milliseconds},
+    error::ContractError,
+    testing::mock_querier::{mock_dependencies_custom, MOCK_KERNEL_CONTRACT},
 };
 use cosmwasm_std::{
     attr,
-    testing::{mock_env, mock_info},
-    Response, Uint128,
+    testing::{mock_dependencies, mock_env, mock_info},
+    BankMsg, Coin, CosmosMsg, DepsMut, QuerierWrapper, Response, SubMsg, Uint128,
 };
-use cosmwasm_std::{BankMsg, Coin, CosmosMsg, DepsMut, QuerierWrapper, SubMsg};
 
 use crate::{
     contract::{execute, instantiate},
     state::SPLITTER,
 };
-use andromeda_finance::weighted_splitter::{AddressWeight, ExecuteMsg, InstantiateMsg, Splitter};
-use andromeda_testing::economics_msg::generate_economics_message;
-use cosmwasm_std::testing::mock_dependencies;
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const MOCK_RECIPIENT1: &str = "recipient1";
 const MOCK_RECIPIENT2: &str = "recipient2";
@@ -74,8 +71,7 @@ fn test_update_app_contract() {
     assert_eq!(
         Response::new()
             .add_attribute("action", "update_app_contract")
-            .add_attribute("address", "app_contract")
-            .add_submessage(generate_economics_message("owner", "UpdateAppContract")),
+            .add_attribute("address", "app_contract"),
         res
     );
 }
@@ -184,12 +180,10 @@ fn test_execute_update_lock() {
         .plus_seconds(current_time)
         .plus_milliseconds(Milliseconds(879));
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![
-                attr("action", "update_lock"),
-                attr("locked", new_lock.to_string())
-            ])
-            .add_submessage(generate_economics_message(OWNER, "UpdateLock")),
+        Response::default().add_attributes(vec![
+            attr("action", "update_lock"),
+            attr("locked", new_lock.to_string())
+        ]),
         res
     );
 
@@ -457,9 +451,7 @@ fn test_execute_remove_recipient() {
     };
     assert_eq!(expected_splitter, splitter);
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![attr("action", "removed_recipient")])
-            .add_submessage(generate_economics_message(OWNER, "RemoveRecipient")),
+        Response::default().add_attributes(vec![attr("action", "removed_recipient")]),
         res
     );
 
@@ -735,9 +727,7 @@ fn test_update_recipient_weight() {
     };
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![attr("action", "updated_recipient_weight")])
-            .add_submessage(generate_economics_message(OWNER, "UpdateRecipientWeight")),
+        Response::default().add_attributes(vec![attr("action", "updated_recipient_weight")]),
         res
     );
     let splitter = SPLITTER.load(deps.as_ref().storage).unwrap();
@@ -1045,9 +1035,7 @@ fn test_execute_add_recipient() {
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![attr("action", "added_recipient")])
-            .add_submessage(generate_economics_message(OWNER, "AddRecipient")),
+        Response::default().add_attributes(vec![attr("action", "added_recipient")]),
         res
     );
 
@@ -1154,9 +1142,7 @@ fn test_execute_add_recipient_duplicate_recipient() {
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![attr("action", "added_recipient")])
-            .add_submessage(generate_economics_message(OWNER, "AddRecipient")),
+        Response::default().add_attributes(vec![attr("action", "added_recipient")]),
         res
     );
     // Add a duplicate user
@@ -1388,9 +1374,7 @@ fn test_execute_update_recipients() {
     let info = mock_info(owner, &[]);
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![attr("action", "update_recipients")])
-            .add_submessage(generate_economics_message(OWNER, "UpdateRecipients")),
+        Response::default().add_attributes(vec![attr("action", "update_recipients")]),
         res
     );
 
@@ -1637,8 +1621,7 @@ fn test_execute_send() {
                 }),
             ),
         ])
-        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")])
-        .add_submessage(generate_economics_message(OWNER, "Send"));
+        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")]);
 
     assert_eq!(res, expected_res);
 
@@ -1659,8 +1642,7 @@ fn test_execute_send() {
             ),
             // amp_msg,
         ])
-        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")])
-        .add_submessage(generate_economics_message(OWNER, "Send"));
+        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")]);
 
     assert_eq!(res, expected_res);
 }

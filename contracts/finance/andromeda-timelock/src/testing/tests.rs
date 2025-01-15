@@ -10,7 +10,6 @@ use andromeda_std::{
     common::{expiration::Expiry, Milliseconds},
     error::ContractError,
 };
-use andromeda_testing::economics_msg::generate_economics_message;
 use cosmwasm_std::{
     attr, coin, coins, from_json,
     testing::{mock_env, mock_info},
@@ -34,17 +33,15 @@ fn test_execute_hold_funds() {
     };
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
-    let expected = Response::default()
-        .add_attributes(vec![
-            attr("action", "hold_funds"),
-            attr("sender", info.sender.to_string()),
-            attr(
-                "recipient",
-                format!("{:?}", Recipient::from_string(info.sender.to_string())),
-            ),
-            attr("condition", format!("{:?}", Some(condition.clone()))),
-        ])
-        .add_submessage(generate_economics_message("owner", "HoldFunds"));
+    let expected = Response::default().add_attributes(vec![
+        attr("action", "hold_funds"),
+        attr("sender", info.sender.to_string()),
+        attr(
+            "recipient",
+            format!("{:?}", Recipient::from_string(info.sender.to_string())),
+        ),
+        attr("condition", format!("{:?}", Some(condition.clone()))),
+    ]);
     assert_eq!(expected, res);
 
     let query_msg = QueryMsg::GetLockedFunds {
@@ -140,13 +137,10 @@ fn test_execute_release_funds_no_condition() {
         amount: info.funds,
     };
     assert_eq!(
-        Response::new()
-            .add_message(bank_msg)
-            .add_attributes(vec![
-                attr("action", "release_funds"),
-                attr("recipient_addr", "owner"),
-            ])
-            .add_submessage(generate_economics_message(owner, "ReleaseFunds")),
+        Response::new().add_message(bank_msg).add_attributes(vec![
+            attr("action", "release_funds"),
+            attr("recipient_addr", "owner"),
+        ]),
         res
     );
 }
@@ -189,8 +183,7 @@ fn test_execute_release_multiple_escrows() {
             .add_attributes(vec![
                 attr("action", "release_funds"),
                 attr("recipient_addr", "recipient"),
-            ])
-            .add_submessage(generate_economics_message("sender2", "ReleaseFunds")),
+            ]),
         res
     );
 }
@@ -224,13 +217,10 @@ fn test_execute_release_funds_time_condition() {
         amount: info.funds,
     };
     assert_eq!(
-        Response::new()
-            .add_message(bank_msg)
-            .add_attributes(vec![
-                attr("action", "release_funds"),
-                attr("recipient_addr", "owner"),
-            ])
-            .add_submessage(generate_economics_message(owner, "ReleaseFunds")),
+        Response::new().add_message(bank_msg).add_attributes(vec![
+            attr("action", "release_funds"),
+            attr("recipient_addr", "owner"),
+        ]),
         res
     );
 }
@@ -308,13 +298,10 @@ fn test_execute_release_funds_min_funds_condition() {
         amount: vec![coin(210, "uusd"), coin(120, "uluna")],
     };
     assert_eq!(
-        Response::new()
-            .add_message(bank_msg)
-            .add_attributes(vec![
-                attr("action", "release_funds"),
-                attr("recipient_addr", "owner"),
-            ])
-            .add_submessage(generate_economics_message(owner, "ReleaseFunds")),
+        Response::new().add_message(bank_msg).add_attributes(vec![
+            attr("action", "release_funds"),
+            attr("recipient_addr", "owner"),
+        ]),
         res
     );
 }
@@ -357,13 +344,10 @@ fn test_execute_release_specific_funds_no_condition() {
         amount: info.funds,
     };
     assert_eq!(
-        Response::new()
-            .add_message(bank_msg)
-            .add_attributes(vec![
-                attr("action", "release_funds"),
-                attr("recipient_addr", "owner"),
-            ])
-            .add_submessage(generate_economics_message(owner, "ReleaseSpecificFunds")),
+        Response::new().add_message(bank_msg).add_attributes(vec![
+            attr("action", "release_funds"),
+            attr("recipient_addr", "owner"),
+        ]),
         res
     );
 }
@@ -396,13 +380,10 @@ fn test_execute_release_specific_funds_time_condition() {
         amount: info.funds,
     };
     assert_eq!(
-        Response::new()
-            .add_message(bank_msg)
-            .add_attributes(vec![
-                attr("action", "release_funds"),
-                attr("recipient_addr", "owner"),
-            ])
-            .add_submessage(generate_economics_message(owner, "ReleaseSpecificFunds")),
+        Response::new().add_message(bank_msg).add_attributes(vec![
+            attr("action", "release_funds"),
+            attr("recipient_addr", "owner"),
+        ]),
         res
     );
 }
@@ -452,13 +433,10 @@ fn test_execute_release_specific_funds_min_funds_condition() {
         amount: vec![coin(210, "uusd"), coin(120, "uluna")],
     };
     assert_eq!(
-        Response::new()
-            .add_message(bank_msg)
-            .add_attributes(vec![
-                attr("action", "release_funds"),
-                attr("recipient_addr", "owner"),
-            ])
-            .add_submessage(generate_economics_message(owner, "ReleaseSpecificFunds")),
+        Response::new().add_message(bank_msg).add_attributes(vec![
+            attr("action", "release_funds"),
+            attr("recipient_addr", "owner"),
+        ]),
         res
     );
 }

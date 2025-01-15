@@ -8,7 +8,6 @@ use andromeda_std::amp::{AndrAddr, Recipient};
 use andromeda_std::common::context::ExecuteContext;
 
 use andromeda_std::{error::ContractError, testing::mock_querier::MOCK_KERNEL_CONTRACT};
-use andromeda_testing::economics_msg::generate_economics_message;
 use cosmwasm_std::{attr, Decimal, Event};
 use cosmwasm_std::{
     testing::{mock_env, mock_info},
@@ -140,8 +139,7 @@ fn test_transfer() {
             .add_attribute("action", "transfer")
             .add_attribute("from", "sender")
             .add_attribute("to", "other")
-            .add_attribute("amount", "90")
-            .add_submessage(generate_economics_message("sender", "Transfer")),
+            .add_attribute("amount", "90"),
         res
     );
 
@@ -236,8 +234,7 @@ fn test_send() {
                 .into_cosmos_msg("contract")
                 .unwrap(),
             )
-            .add_event(expected_event)
-            .add_submessage(generate_economics_message("sender", "Send")),
+            .add_event(expected_event),
         res
     );
 

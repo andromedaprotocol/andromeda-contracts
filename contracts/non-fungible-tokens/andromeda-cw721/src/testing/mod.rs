@@ -3,10 +3,11 @@ use andromeda_non_fungible_tokens::cw721::{
     ExecuteMsg, InstantiateMsg, IsArchivedResponse, MintMsg, QueryMsg, TokenExtension,
     TransferAgreement,
 };
-use andromeda_std::error::ContractError;
-use andromeda_std::testing::mock_querier::FAKE_VFS_PATH;
-use andromeda_std::testing::mock_querier::{mock_dependencies_custom, MOCK_KERNEL_CONTRACT};
-use andromeda_std::{ado_contract::ADOContract, amp::addresses::AndrAddr};
+use andromeda_std::{
+    amp::addresses::AndrAddr,
+    error::ContractError,
+    testing::mock_querier::{mock_dependencies_custom, FAKE_VFS_PATH, MOCK_KERNEL_CONTRACT},
+};
 use cosmwasm_std::{
     attr, coin, from_json,
     testing::{mock_env, mock_info},
@@ -289,23 +290,12 @@ fn test_burn() {
     let info = mock_info(creator.as_str(), &[]);
     let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
 
-    let fee_message = ADOContract::default()
-        .pay_fee(
-            deps.as_ref().storage,
-            &deps.as_ref().querier,
-            "Burn".to_string(),
-            Addr::unchecked("creator".to_string()),
-        )
-        .unwrap();
-
     assert_eq!(
-        Response::default()
-            .add_submessage(fee_message)
-            .add_attributes(vec![
-                attr("action", "burn"),
-                attr("token_id", &token_id),
-                attr("sender", info.sender.to_string()),
-            ]),
+        Response::default().add_attributes(vec![
+            attr("action", "burn"),
+            attr("token_id", &token_id),
+            attr("sender", info.sender.to_string()),
+        ]),
         res
     );
 

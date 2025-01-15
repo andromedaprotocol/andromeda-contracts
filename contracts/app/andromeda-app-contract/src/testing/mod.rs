@@ -1,18 +1,11 @@
-use crate::state::{ADO_DESCRIPTORS, ADO_IDX};
-
 use super::{contract::*, state::ADO_ADDRESSES};
+use crate::state::{ADO_DESCRIPTORS, ADO_IDX};
 use andromeda_app::app::{AppComponent, ComponentType, ExecuteMsg, InstantiateMsg};
 use andromeda_std::ado_base::ownership::OwnershipMessage;
-// use andromeda_std::amp::AndrAddr;
-// use andromeda_std::common::reply::ReplyId;
-// use andromeda_std::os::vfs::{convert_component_name, ExecuteMsg as VFSExecuteMsg};
 use andromeda_std::testing::mock_querier::{
     mock_dependencies_custom, MOCK_ANCHOR_CONTRACT, MOCK_CW20_CONTRACT, MOCK_KERNEL_CONTRACT,
 };
-
 use andromeda_std::{ado_base::AndromedaMsg, error::ContractError};
-
-use andromeda_testing::economics_msg::generate_economics_message;
 use cosmwasm_std::{
     attr,
     testing::{mock_env, mock_info},
@@ -332,8 +325,7 @@ fn test_claim_ownership_empty() {
     };
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
-    // The message is for the economics contract
-    assert_eq!(1, res.messages.len());
+    assert_eq!(0, res.messages.len());
 }
 
 #[test]
@@ -371,8 +363,7 @@ fn test_claim_ownership_all() {
     };
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
-    // The 3rd message is for the economics contract
-    assert_eq!(3, res.messages.len());
+    assert_eq!(2, res.messages.len());
 }
 
 #[test]
@@ -410,8 +401,7 @@ fn test_claim_ownership() {
     };
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
-    // The 2nd message is for the economics contract
-    assert_eq!(2, res.messages.len());
+    assert_eq!(1, res.messages.len());
 
     let exec_submsg: SubMsg<Empty> = SubMsg {
         id: 200,
@@ -429,8 +419,7 @@ fn test_claim_ownership() {
     };
     let expected = Response::new()
         .add_submessage(exec_submsg)
-        .add_attributes(vec![attr("method", "claim_ownership")])
-        .add_submessage(generate_economics_message("creator", "ClaimOwnership"));
+        .add_attributes(vec![attr("method", "claim_ownership")]);
 
     assert_eq!(expected, res)
 }
@@ -528,8 +517,7 @@ fn test_proxy_message() {
         .add_attributes(vec![
             attr("method", "app_message"),
             attr("recipient", "token"),
-        ])
-        .add_submessage(generate_economics_message("creator", "ProxyMessage"));
+        ]);
 
     assert_eq!(expected, res)
 }

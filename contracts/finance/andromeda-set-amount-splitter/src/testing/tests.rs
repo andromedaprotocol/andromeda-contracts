@@ -6,7 +6,6 @@ use andromeda_std::{
     common::{expiration::Expiry, Milliseconds},
     error::ContractError,
 };
-use andromeda_testing::economics_msg::generate_economics_message;
 use cosmwasm_std::{
     attr, coin, coins, from_json,
     testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR},
@@ -79,12 +78,10 @@ fn test_execute_update_lock() {
         .plus_seconds(current_time)
         .plus_milliseconds(Milliseconds(879));
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![
-                attr("action", "update_lock"),
-                attr("locked", new_lock.to_string())
-            ])
-            .add_submessage(generate_economics_message(OWNER, "UpdateLock")),
+        Response::default().add_attributes(vec![
+            attr("action", "update_lock"),
+            attr("locked", new_lock.to_string())
+        ]),
         res
     );
 
@@ -148,9 +145,7 @@ fn test_execute_update_recipients() {
     let info = mock_info(OWNER, &[]);
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![attr("action", "update_recipients")])
-            .add_submessage(generate_economics_message(OWNER, "UpdateRecipients")),
+        Response::default().add_attributes(vec![attr("action", "update_recipients")]),
         res
     );
 
@@ -253,8 +248,7 @@ fn test_execute_send() {
             ),
             amp_msg,
         ])
-        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")])
-        .add_submessage(generate_economics_message(OWNER, "Send"));
+        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")]);
 
     assert_eq!(res, expected_res);
 
@@ -302,8 +296,7 @@ fn test_execute_send() {
             ),
             amp_msg,
         ])
-        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")])
-        .add_submessage(generate_economics_message(OWNER, "Send"));
+        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")]);
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
 
     assert_eq!(res, expected_res);
@@ -378,8 +371,7 @@ fn test_execute_send_ado_recipient() {
             amp_msg,
         ])
         .add_attribute("action", "send")
-        .add_attribute("sender", "creator")
-        .add_submessage(generate_economics_message(OWNER, "Send"));
+        .add_attribute("sender", "creator");
 
     assert_eq!(res, expected_res);
 }
@@ -532,8 +524,7 @@ fn test_update_app_contract() {
     assert_eq!(
         Response::new()
             .add_attribute("action", "update_app_contract")
-            .add_attribute("address", "app_contract")
-            .add_submessage(generate_economics_message(OWNER, "UpdateAppContract")),
+            .add_attribute("address", "app_contract"),
         res
     );
 }

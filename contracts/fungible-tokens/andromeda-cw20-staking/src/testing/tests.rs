@@ -27,7 +27,6 @@ use andromeda_fungible_tokens::cw20_staking::{
     AllocationConfig, AllocationState, Config, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
     RewardToken, RewardTokenUnchecked, RewardType, StakerResponse, State,
 };
-use andromeda_testing::economics_msg::generate_economics_message;
 use cw_asset::{AssetInfo, AssetInfoUnchecked};
 
 const MOCK_STAKING_TOKEN: &str = "staking_token";
@@ -353,8 +352,7 @@ fn test_stake_unstake_tokens() {
             .add_attribute("action", "stake_tokens")
             .add_attribute("sender", "sender")
             .add_attribute("share", "100")
-            .add_attribute("amount", "100")
-            .add_submessage(generate_economics_message(MOCK_STAKING_TOKEN, "Receive")),
+            .add_attribute("amount", "100"),
         res
     );
 
@@ -392,8 +390,7 @@ fn test_stake_unstake_tokens() {
             .add_attribute("action", "stake_tokens")
             .add_attribute("sender", "other_sender")
             .add_attribute("share", "50")
-            .add_attribute("amount", "100")
-            .add_submessage(generate_economics_message(MOCK_STAKING_TOKEN, "Receive")),
+            .add_attribute("amount", "100"),
         res
     );
 
@@ -445,8 +442,7 @@ fn test_stake_unstake_tokens() {
                     amount: Uint128::new(200)
                 })
                 .unwrap()
-            })
-            .add_submessage(generate_economics_message("sender", "UnstakeTokens")),
+            }),
         res
     );
 
@@ -489,8 +485,7 @@ fn test_stake_unstake_tokens() {
                     amount: Uint128::new(100)
                 })
                 .unwrap()
-            })
-            .add_submessage(generate_economics_message("other_sender", "UnstakeTokens")),
+            }),
         res
     );
 
@@ -587,8 +582,7 @@ fn test_update_global_indexes() {
             .add_attribute("action", "update_global_indexes")
             .add_attribute("cw20:incentive_token", "0.2")
             .add_attribute("native:uandr", "0")
-            .add_attribute("native:uusd", "0.4")
-            .add_submessage(generate_economics_message("owner", "UpdateGlobalIndexes")),
+            .add_attribute("native:uusd", "0.4"),
         res
     );
 
@@ -648,8 +642,7 @@ fn test_update_global_indexes() {
             .add_attribute("action", "update_global_indexes")
             .add_attribute("cw20:incentive_token", "0.2")
             .add_attribute("native:uandr", "0.4")
-            .add_attribute("native:uusd", "0.4")
-            .add_submessage(generate_economics_message("owner", "UpdateGlobalIndexes")),
+            .add_attribute("native:uusd", "0.4"),
         res
     );
 
@@ -720,8 +713,7 @@ fn test_update_global_indexes_selective() {
     assert_eq!(
         Response::new()
             .add_attribute("action", "update_global_indexes")
-            .add_attribute("native:uusd", "0.4")
-            .add_submessage(generate_economics_message("owner", "UpdateGlobalIndexes")),
+            .add_attribute("native:uusd", "0.4"),
         res
     );
 
@@ -854,8 +846,7 @@ fn test_update_global_indexes_cw20_deposit() {
     assert_eq!(
         Response::new()
             .add_attribute("action", "update_global_indexes")
-            .add_attribute("cw20:incentive_token", "0.2")
-            .add_submessage(generate_economics_message(MOCK_INCENTIVE_TOKEN, "Receive")),
+            .add_attribute("cw20:incentive_token", "0.2"),
         res
     );
 
@@ -1007,7 +998,7 @@ fn test_claim_rewards() {
 
     let info = mock_info("user1", &[]);
     let msg = ExecuteMsg::ClaimRewards {};
-    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), info, msg);
 
     assert_eq!(
         StakerRewardInfo {
@@ -1040,9 +1031,8 @@ fn test_claim_rewards() {
             .add_message(BankMsg::Send {
                 to_address: "user1".to_string(),
                 amount: coins(66, "uusd")
-            })
-            .add_submessage(generate_economics_message("user1", "ClaimRewards")),
-        res
+            }),
+        res.unwrap()
     );
 
     deps.querier
@@ -1051,7 +1041,7 @@ fn test_claim_rewards() {
 
     let info = mock_info("user2", &[]);
     let msg = ExecuteMsg::ClaimRewards {};
-    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), info, msg);
 
     assert_eq!(
         Response::new()
@@ -1059,9 +1049,8 @@ fn test_claim_rewards() {
             .add_message(BankMsg::Send {
                 to_address: "user2".to_string(),
                 amount: coins(33, "uusd")
-            })
-            .add_submessage(generate_economics_message("user2", "ClaimRewards")),
-        res
+            }),
+        res.unwrap()
     );
 
     assert_eq!(
@@ -1227,8 +1216,7 @@ fn test_claim_rewards_allocated() {
                     amount: Uint128::new(25)
                 })
                 .unwrap(),
-            })
-            .add_submessage(generate_economics_message("user1", "ClaimRewards")),
+            }),
         res
     );
 
@@ -1284,8 +1272,7 @@ fn test_claim_rewards_allocated() {
                     amount: Uint128::new(25)
                 })
                 .unwrap(),
-            })
-            .add_submessage(generate_economics_message("user2", "ClaimRewards")),
+            }),
         res
     );
 
@@ -1406,8 +1393,7 @@ fn test_claim_rewards_allocated_init_timestamp_in_future() {
                     amount: Uint128::new(25)
                 })
                 .unwrap(),
-            })
-            .add_submessage(generate_economics_message("user1", "ClaimRewards")),
+            }),
         res
     );
 
@@ -1462,8 +1448,7 @@ fn test_claim_rewards_allocated_init_timestamp_in_future() {
                     amount: Uint128::new(25)
                 })
                 .unwrap(),
-            })
-            .add_submessage(generate_economics_message("user2", "ClaimRewards")),
+            }),
         res
     );
 
@@ -1857,8 +1842,7 @@ fn test_add_reward_token() {
     assert_eq!(
         Response::new()
             .add_attribute("action", "add_reward_token")
-            .add_attribute("added_token", "cw20:incentive_token")
-            .add_submessage(generate_economics_message("owner", "AddRewardToken")),
+            .add_attribute("added_token", "cw20:incentive_token"),
         res
     );
 
@@ -2013,8 +1997,7 @@ fn test_remove_reward_token() {
         Response::new()
             .add_attribute("action", "remove_reward_token")
             .add_attribute("number_of_reward_tokens", "0")
-            .add_attribute("removed_token", "native:uusd")
-            .add_submessage(generate_economics_message("owner", "RemoveRewardToken")),
+            .add_attribute("removed_token", "native:uusd"),
         res
     );
 
@@ -2204,8 +2187,7 @@ fn test_claim_rewards_after_remove() {
             .add_message(BankMsg::Send {
                 to_address: "user1".to_string(),
                 amount: coins(66, "uusd")
-            })
-            .add_submessage(generate_economics_message("user1", "ClaimRewards")),
+            }),
         res
     );
 
@@ -2229,8 +2211,7 @@ fn test_claim_rewards_after_remove() {
             .add_message(BankMsg::Send {
                 to_address: "user2".to_string(),
                 amount: coins(33, "uusd")
-            })
-            .add_submessage(generate_economics_message("user2", "ClaimRewards")),
+            }),
         res
     );
 
@@ -2362,8 +2343,7 @@ fn test_claim_rewards_allocated_after_remove() {
                     amount: Uint128::new(25)
                 })
                 .unwrap(),
-            })
-            .add_submessage(generate_economics_message("user", "ClaimRewards")),
+            }),
         res
     );
 
@@ -2433,8 +2413,7 @@ fn test_replace_reward_token() {
         Response::new()
             .add_attribute("action", "replace_reward_token")
             .add_attribute("origin_reward_token", "native:uusd")
-            .add_attribute("new_reward_token", format!("cw20:{MOCK_INCENTIVE_TOKEN}"))
-            .add_submessage(generate_economics_message("owner", "ReplaceRewardToken")),
+            .add_attribute("new_reward_token", format!("cw20:{MOCK_INCENTIVE_TOKEN}")),
         res
     );
 

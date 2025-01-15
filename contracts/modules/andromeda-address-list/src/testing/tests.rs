@@ -1,20 +1,19 @@
-use crate::contract::{execute, instantiate, query};
-use crate::state::PERMISSIONS;
-use crate::testing::mock_querier::{mock_dependencies_custom, MOCK_KERNEL_CONTRACT};
+use crate::{
+    contract::{execute, instantiate, query},
+    state::PERMISSIONS,
+    testing::mock_querier::{mock_dependencies_custom, MOCK_KERNEL_CONTRACT},
+};
 use andromeda_modules::address_list::{
     ActorPermission, ActorPermissionResponse, ExecuteMsg, IncludesActorResponse, InstantiateMsg,
     QueryMsg,
 };
-use andromeda_std::ado_base::permissioning::LocalPermission;
-
-use andromeda_std::amp::AndrAddr;
-use andromeda_std::error::ContractError;
-
-use andromeda_testing::economics_msg::generate_economics_message;
-use cosmwasm_std::{attr, from_json, Addr, DepsMut, MessageInfo};
+use andromeda_std::{
+    ado_base::permissioning::LocalPermission, amp::AndrAddr, error::ContractError,
+};
 use cosmwasm_std::{
+    attr, from_json,
     testing::{mock_env, mock_info},
-    Response,
+    Addr, DepsMut, MessageInfo, Response,
 };
 
 fn init(deps: DepsMut, info: MessageInfo) {
@@ -88,13 +87,11 @@ fn test_add_remove_actor() {
     };
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
-    let expected = Response::default()
-        .add_attributes(vec![
-            attr("action", "add_actor_permission"),
-            attr("actor", actor.clone()),
-            attr("permission", permission.to_string()),
-        ])
-        .add_submessage(generate_economics_message("creator", "PermissionActors"));
+    let expected = Response::default().add_attributes(vec![
+        attr("action", "add_actor_permission"),
+        attr("actor", actor.clone()),
+        attr("permission", permission.to_string()),
+    ]);
     assert_eq!(expected, res);
 
     // Check that the actor and permission have been saved.
@@ -164,13 +161,11 @@ fn test_add_remove_multiple_actors() {
     };
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
-    let expected = Response::default()
-        .add_attributes(vec![
-            attr("action", "add_actor_permission"),
-            attr("actor", "actor1, actor2"),
-            attr("permission", permission.to_string()),
-        ])
-        .add_submessage(generate_economics_message("creator", "PermissionActors"));
+    let expected = Response::default().add_attributes(vec![
+        attr("action", "add_actor_permission"),
+        attr("actor", "actor1, actor2"),
+        attr("permission", permission.to_string()),
+    ]);
     assert_eq!(expected, res);
 
     // Check that the actor and permission have been saved.

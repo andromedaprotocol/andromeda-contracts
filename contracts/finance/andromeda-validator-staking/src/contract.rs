@@ -208,12 +208,6 @@ fn execute_unstake(
     } = ctx;
 
     let delegator = env.contract.address;
-    // Ensure sender is the contract owner
-    ensure!(
-        ADOContract::default().is_contract_owner(deps.storage, info.sender.as_str())?,
-        ContractError::Unauthorized {}
-    );
-
     let default_validator = DEFAULT_VALIDATOR.load(deps.storage)?;
     let validator = validator.unwrap_or(default_validator);
 

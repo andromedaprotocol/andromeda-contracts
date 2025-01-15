@@ -18,6 +18,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     #[cfg_attr(not(target_arch = "wasm32"), cw_orch(payable))]
     Stake { validator: Option<Addr> },
+    #[attrs(restricted)]
     Unstake {
         validator: Option<Addr>,
         amount: Option<Uint128>,

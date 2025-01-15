@@ -348,7 +348,7 @@ fn test_claim_batch_still_locked() {
         batch_id: 1,
     };
 
-    let res = execute(deps.as_mut(), mock_env(), info, msg);
+    let res = execute(deps.as_mut(), mock_env(), mock_info("owner", &[]), msg);
 
     assert_eq!(ContractError::FundsAreLocked {}, res.unwrap_err());
 }
@@ -374,7 +374,7 @@ fn test_claim_batch_no_funds_available() {
         batch_id: 1,
     };
 
-    let res = execute(deps.as_mut(), mock_env(), info, msg);
+    let res = execute(deps.as_mut(), mock_env(), mock_info("owner", &[]), msg);
 
     // This is because, the first payment becomes available after 10 seconds.
     assert_eq!(ContractError::WithdrawalIsEmpty {}, res.unwrap_err());
@@ -432,7 +432,7 @@ fn test_claim_batch_single_claim() {
         batch_id: 1,
     };
 
-    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    let res = execute(deps.as_mut(), env, mock_info("owner", &[]), msg).unwrap();
 
     assert_eq!(
         Response::new()
@@ -493,7 +493,7 @@ fn test_claim_batch_not_nice_numbers_single_release() {
         batch_id: 1,
     };
 
-    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    let res = execute(deps.as_mut(), env, mock_info("owner", &[]), msg).unwrap();
 
     assert_eq!(
         Response::new()
@@ -557,7 +557,13 @@ fn test_claim_batch_not_nice_numbers_multiple_releases() {
         batch_id: 1,
     };
 
-    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+    let res = execute(
+        deps.as_mut(),
+        env.clone(),
+        mock_info("owner", &[]),
+        msg.clone(),
+    )
+    .unwrap();
 
     assert_eq!(
         Response::new()
@@ -587,7 +593,7 @@ fn test_claim_batch_not_nice_numbers_multiple_releases() {
 
     env.block.time = env.block.time.plus_seconds(duration);
 
-    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    let res = execute(deps.as_mut(), env, mock_info("owner", &[]), msg).unwrap();
     assert_eq!(
         Response::new()
             .add_message(BankMsg::Send {
@@ -645,13 +651,18 @@ fn test_claim_batch_middle_of_interval() {
     // Only halfway to first release.
     env.block.time = env.block.time.plus_seconds(release_duration.seconds() / 2);
 
-    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+    let res = execute(
+        deps.as_mut(),
+        env.clone(),
+        mock_info("owner", &[]),
+        msg.clone(),
+    );
 
     assert_eq!(ContractError::WithdrawalIsEmpty {}, res.unwrap_err());
 
     // First release available and halfway to second -> result is rounding down.
     env.block.time = env.block.time.plus_seconds(release_duration.seconds());
-    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    let res = execute(deps.as_mut(), env, mock_info("owner", &[]), msg).unwrap();
 
     assert_eq!(
         Response::new()
@@ -711,7 +722,7 @@ fn test_claim_batch_multiple_claims() {
         number_of_claims: Some(1),
         batch_id: 1,
     };
-    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+    let res = execute(deps.as_mut(), env.clone(), mock_info("owner", &[]), msg).unwrap();
 
     assert_eq!(
         Response::new()
@@ -744,7 +755,7 @@ fn test_claim_batch_multiple_claims() {
         number_of_claims: None,
         batch_id: 1,
     };
-    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    let res = execute(deps.as_mut(), env, mock_info("owner", &[]), msg).unwrap();
 
     assert_eq!(
         Response::new()
@@ -805,7 +816,13 @@ fn test_claim_batch_all_releases() {
         number_of_claims: None,
         batch_id: 1,
     };
-    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+    let res = execute(
+        deps.as_mut(),
+        env.clone(),
+        mock_info("owner", &[]),
+        msg.clone(),
+    )
+    .unwrap();
 
     assert_eq!(
         Response::new()
@@ -834,7 +851,7 @@ fn test_claim_batch_all_releases() {
     );
 
     // Try to claim again.
-    let res = execute(deps.as_mut(), env, info, msg);
+    let res = execute(deps.as_mut(), env, mock_info("owner", &[]), msg);
 
     assert_eq!(ContractError::WithdrawalIsEmpty {}, res.unwrap_err());
 }
@@ -870,7 +887,7 @@ fn test_claim_batch_too_high_of_claim() {
         batch_id: 1,
     };
 
-    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    let res = execute(deps.as_mut(), env, mock_info("owner", &[]), msg).unwrap();
 
     assert_eq!(
         Response::new()

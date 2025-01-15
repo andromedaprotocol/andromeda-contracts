@@ -9,7 +9,6 @@ use andromeda_std::{
     error::ContractError,
     testing::mock_querier::{MOCK_CW20_CONTRACT, MOCK_KERNEL_CONTRACT},
 };
-use andromeda_testing::economics_msg::generate_economics_message;
 use cosmwasm_schema::{cw_serde, serde::Deserialize};
 use cosmwasm_std::{
     attr, coin, from_json,
@@ -169,13 +168,7 @@ fn test_claim() {
         })
         .unwrap(),
     }));
-    assert_eq!(
-        res.messages,
-        vec![
-            expected,
-            generate_economics_message(test_data.account.as_str(), "Claim")
-        ]
-    );
+    assert_eq!(res.messages, vec![expected]);
 
     assert_eq!(
         res.attributes,
@@ -256,13 +249,7 @@ fn test_claim() {
         })
         .unwrap(),
     }));
-    assert_eq!(
-        res.messages,
-        vec![
-            expected,
-            generate_economics_message(test_data.account.as_str(), "Claim")
-        ]
-    );
+    assert_eq!(res.messages, vec![expected]);
 
     assert_eq!(
         res.attributes,
@@ -341,13 +328,7 @@ fn test_claim_native() {
             denom: MOCK_NATIVE_DENOM.to_string(),
         }],
     }));
-    assert_eq!(
-        res.messages,
-        vec![
-            expected,
-            generate_economics_message(test_data.account.as_str(), "Claim")
-        ]
-    );
+    assert_eq!(res.messages, vec![expected]);
 
     assert_eq!(
         res.attributes,
@@ -437,13 +418,7 @@ fn test_multiple_claim() {
             })
             .unwrap(),
         }));
-        assert_eq!(
-            res.messages,
-            vec![
-                expected,
-                generate_economics_message(account.account.as_str(), "Claim")
-            ]
-        );
+        assert_eq!(res.messages, vec![expected]);
 
         assert_eq!(
             res.attributes,
@@ -588,13 +563,7 @@ fn test_can_burn() {
         })
         .unwrap(),
     }));
-    assert_eq!(
-        res.messages,
-        vec![
-            expected,
-            generate_economics_message(test_data.account.as_str(), "Claim")
-        ]
-    );
+    assert_eq!(res.messages, vec![expected]);
 
     assert_eq!(
         res.attributes,
@@ -623,10 +592,7 @@ fn test_can_burn() {
         })
         .unwrap(),
     }));
-    assert_eq!(
-        res.messages,
-        vec![expected, generate_economics_message("owner0000", "Burn")]
-    );
+    assert_eq!(res.messages, vec![expected]);
 
     assert_eq!(
         res.attributes,
@@ -688,10 +654,7 @@ fn test_can_burn_native() {
             denom: MOCK_NATIVE_DENOM.to_string(),
         }],
     }));
-    assert_eq!(
-        res.messages,
-        vec![expected, generate_economics_message("owner0000", "Burn")]
-    );
+    assert_eq!(res.messages, vec![expected]);
 
     assert_eq!(
         res.attributes,

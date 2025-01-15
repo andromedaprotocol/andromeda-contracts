@@ -6,7 +6,6 @@ use andromeda_std::{
     common::{expiration::Expiry, Milliseconds},
     error::ContractError,
 };
-use andromeda_testing::economics_msg::generate_economics_message;
 use cosmwasm_std::{
     attr, from_json,
     testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR},
@@ -198,12 +197,10 @@ fn test_execute_update_lock() {
     let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![
-                attr("action", "update_lock"),
-                attr("locked", lock_time.get_time(&env.block).to_string())
-            ])
-            .add_submessage(generate_economics_message(OWNER, "UpdateLock")),
+        Response::default().add_attributes(vec![
+            attr("action", "update_lock"),
+            attr("locked", lock_time.get_time(&env.block).to_string())
+        ]),
         res
     );
 
@@ -317,9 +314,7 @@ fn test_execute_update_thresholds() {
     let info = mock_info(OWNER, &[]);
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
-        Response::default()
-            .add_attributes(vec![attr("action", "update_thresholds")])
-            .add_submessage(generate_economics_message(OWNER, "UpdateThresholds")),
+        Response::default().add_attributes(vec![attr("action", "update_thresholds")]),
         res
     );
 
@@ -437,8 +432,7 @@ fn test_execute_send() {
             ),
             amp_msg,
         ])
-        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")])
-        .add_submessage(generate_economics_message(OWNER, "Send"));
+        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")]);
 
     assert_eq!(res, expected_res);
 
@@ -479,8 +473,7 @@ fn test_execute_send() {
             ),
             amp_msg,
         ])
-        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")])
-        .add_submessage(generate_economics_message(OWNER, "Send"));
+        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")]);
 
     assert_eq!(res, expected_res);
 
@@ -513,8 +506,7 @@ fn test_execute_send() {
     let expected_res = Response::new()
         // No refund for the sender since the percentages add up to 100
         .add_submessage(amp_msg)
-        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")])
-        .add_submessage(generate_economics_message(OWNER, "Send"));
+        .add_attributes(vec![attr("action", "send"), attr("sender", "creator")]);
 
     assert_eq!(res, expected_res);
 }
@@ -580,84 +572,81 @@ fn test_execute_send_threshold_not_found() {
         }
     );
 }
+#[test]
+fn test_execute_send_ado_recipient() {
+    let mut deps = mock_dependencies_custom(&[]);
+    let env = mock_env();
+    let _res: Response = init(deps.as_mut());
 
-// #[test]
-// fn test_execute_send_ado_recipient() {
-//     let mut deps = mock_dependencies_custom(&[]);
-//     let env = mock_env();
-//     let _res: Response = init(deps.as_mut());
+    let sender_funds_amount = 10000u128;
+    let info = mock_info(OWNER, &[Coin::new(sender_funds_amount, "uluna")]);
 
-//     let sender_funds_amount = 10000u128;
-//     let info = mock_info(OWNER, &[Coin::new(sender_funds_amount, "uluna")]);
+    let recip_address1 = "address1".to_string();
+    let recip_address2 = "address2".to_string();
 
-//     let recip_address1 = "address1".to_string();
-//     let recip_percent1 = 10; // 10%
+    let recip1 = Recipient::from_string(recip_address1);
+    let recip2 = Recipient::from_string(recip_address2);
 
-//     let recip_address2 = "address2".to_string();
-//     let recip_percent2 = 20; // 20%
+    let msg = ExecuteMsg::Send {};
 
-//     let recip1 = Recipient::from_string(recip_address1);
-//     let recip2 = Recipient::from_string(recip_address2);
+    let amp_msg_1 = recip1
+        .generate_amp_msg(&deps.as_ref(), Some(vec![Coin::new(1000, "uluna")]))
+        .unwrap();
+    let amp_msg_2 = recip2
+        .generate_amp_msg(&deps.as_ref(), Some(vec![Coin::new(2000, "uluna")]))
+        .unwrap();
+    let amp_pkt = AMPPkt::new(
+        MOCK_CONTRACT_ADDR.to_string(),
+        MOCK_CONTRACT_ADDR.to_string(),
+        vec![amp_msg_1, amp_msg_2],
+    );
+    let amp_msg = amp_pkt
+        .to_sub_msg(
+            MOCK_KERNEL_CONTRACT,
+            Some(vec![Coin::new(1000, "uluna"), Coin::new(2000, "uluna")]),
+            1,
+        )
+        .unwrap();
 
-//     let recipient = vec![
-//         AddressFunds {
-//             recipient: recip1.clone(),
-//             percent: Decimal::percent(recip_percent1),
-//         },
-//         AddressFunds {
-//             recipient: recip2.clone(),
-//             percent: Decimal::percent(recip_percent2),
-//         },
-//     ];
-//     let msg = ExecuteMsg::Send {};
+    let splitter = ConditionalSplitter {
+        thresholds: vec![Threshold::new(
+            Uint128::zero(),
+            vec![
+                AddressPercent::new(
+                    recip1.clone(), // 10%
+                    Decimal::from_ratio(Uint128::one(), Uint128::new(10)),
+                ),
+                AddressPercent::new(
+                    recip2.clone(), // 20%
+                    Decimal::from_ratio(Uint128::one(), Uint128::new(5)),
+                ),
+            ],
+        )],
+        lock_time: Milliseconds::default(),
+    };
 
-//     let amp_msg_1 = recip1
-//         .generate_amp_msg(&deps.as_ref(), Some(vec![Coin::new(1000, "uluna")]))
-//         .unwrap();
-//     let amp_msg_2 = recip2
-//         .generate_amp_msg(&deps.as_ref(), Some(vec![Coin::new(2000, "uluna")]))
-//         .unwrap();
-//     let amp_pkt = AMPPkt::new(
-//         MOCK_CONTRACT_ADDR.to_string(),
-//         MOCK_CONTRACT_ADDR.to_string(),
-//         vec![amp_msg_1, amp_msg_2],
-//     );
-//     let amp_msg = amp_pkt
-//         .to_sub_msg(
-//             MOCK_KERNEL_CONTRACT,
-//             Some(vec![Coin::new(1000, "uluna"), Coin::new(2000, "uluna")]),
-//             1,
-//         )
-//         .unwrap();
+    CONDITIONAL_SPLITTER
+        .save(deps.as_mut().storage, &splitter)
+        .unwrap();
 
-//     let splitter = ConditionalSplitter {
-//         recipients: recipient,
-//         lock: Milliseconds::default(),
-//     };
+    let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
 
-//     CONDITIONAL_SPLITTER
-//         .save(deps.as_mut().storage, &splitter)
-//         .unwrap();
+    let expected_res = Response::new()
+        .add_submessages(vec![
+            SubMsg::new(
+                // refunds remainder to sender
+                CosmosMsg::Bank(BankMsg::Send {
+                    to_address: info.sender.to_string(),
+                    amount: vec![Coin::new(7000, "uluna")], // 10000 * 0.7   remainder
+                }),
+            ),
+            amp_msg,
+        ])
+        .add_attribute("action", "send")
+        .add_attribute("sender", "creator");
 
-//     let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
-
-//     let expected_res = Response::new()
-//         .add_submessages(vec![
-//             SubMsg::new(
-//                 // refunds remainder to sender
-//                 CosmosMsg::Bank(BankMsg::Send {
-//                     to_address: info.sender.to_string(),
-//                     amount: vec![Coin::new(7000, "uluna")], // 10000 * 0.7   remainder
-//                 }),
-//             ),
-//             amp_msg,
-//         ])
-//         .add_attribute("action", "send")
-//         .add_attribute("sender", "creator")
-//         .add_submessage(generate_economics_message(OWNER, "Send"));
-
-//     assert_eq!(res, expected_res);
-// }
+    assert_eq!(res, expected_res);
+}
 
 #[test]
 fn test_handle_packet_exit_with_error_true() {
@@ -804,8 +793,7 @@ fn test_update_app_contract() {
     assert_eq!(
         Response::new()
             .add_attribute("action", "update_app_contract")
-            .add_attribute("address", "app_contract")
-            .add_submessage(generate_economics_message(OWNER, "UpdateAppContract")),
+            .add_attribute("address", "app_contract"),
         res
     );
 }

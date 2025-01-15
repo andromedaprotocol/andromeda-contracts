@@ -1,24 +1,26 @@
-use crate::contract::{execute, instantiate, query};
-use crate::testing::mock_querier::mock_dependencies_custom;
-use andromeda_fungible_tokens::cw20::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use andromeda_std::ado_base::permissioning::Permission;
-use andromeda_std::ado_base::rates::{LocalRate, LocalRateType, LocalRateValue, PercentRate, Rate};
-use andromeda_std::ado_contract::ADOContract;
-use andromeda_std::amp::{AndrAddr, Recipient};
-use andromeda_std::common::context::ExecuteContext;
-
-use andromeda_std::{error::ContractError, testing::mock_querier::MOCK_KERNEL_CONTRACT};
-use andromeda_testing::economics_msg::generate_economics_message;
-use cosmwasm_std::{attr, Decimal, Event};
-use cosmwasm_std::{
-    testing::{mock_env, mock_info},
-    to_json_binary, Addr, DepsMut, Response, Uint128,
+use crate::{
+    contract::{execute, instantiate, query},
+    testing::mock_querier::{mock_dependencies_custom, MOCK_CW20_CONTRACT},
 };
-
+use andromeda_fungible_tokens::cw20::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use andromeda_std::{
+    ado_base::{
+        permissioning::Permission,
+        rates::{LocalRate, LocalRateType, LocalRateValue, PercentRate, Rate},
+    },
+    ado_contract::ADOContract,
+    amp::{AndrAddr, Recipient},
+    common::context::ExecuteContext,
+    error::ContractError,
+    testing::mock_querier::MOCK_KERNEL_CONTRACT,
+};
+use cosmwasm_std::{
+    attr,
+    testing::{mock_env, mock_info},
+    to_json_binary, Addr, Decimal, DepsMut, Event, Response, Uint128,
+};
 use cw20::{Cw20Coin, Cw20ReceiveMsg};
 use cw20_base::state::BALANCES;
-
-use super::mock_querier::MOCK_CW20_CONTRACT;
 
 fn init(deps: DepsMut) -> Response {
     let msg = InstantiateMsg {
@@ -140,8 +142,7 @@ fn test_transfer() {
             .add_attribute("action", "transfer")
             .add_attribute("from", "sender")
             .add_attribute("to", "other")
-            .add_attribute("amount", "90")
-            .add_submessage(generate_economics_message("sender", "Transfer")),
+            .add_attribute("amount", "90"),
         res
     );
 
@@ -236,8 +237,7 @@ fn test_send() {
                 .into_cosmos_msg("contract")
                 .unwrap(),
             )
-            .add_event(expected_event)
-            .add_submessage(generate_economics_message("sender", "Send")),
+            .add_event(expected_event),
         res
     );
 

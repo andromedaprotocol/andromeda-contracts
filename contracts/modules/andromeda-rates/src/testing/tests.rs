@@ -3,19 +3,16 @@ use crate::testing::mock_querier::{
     mock_dependencies_custom, MOCK_KERNEL_CONTRACT, MOCK_OWNER, MOCK_RECIPIENT1,
 };
 use andromeda_modules::rates::{ExecuteMsg, InstantiateMsg, QueryMsg, RateResponse};
-
-use andromeda_std::ado_base::rates::{LocalRate, LocalRateType, LocalRateValue, RatesResponse};
-use andromeda_std::amp::AndrAddr;
-use andromeda_std::common::Funds;
-use andromeda_std::testing::mock_querier::{MOCK_CW20_CONTRACT, MOCK_UANDR};
-use andromeda_std::{amp::recipient::Recipient, common::encode_binary};
-
-use andromeda_testing::economics_msg::generate_economics_message;
-use cosmwasm_std::{attr, Event};
+use andromeda_std::{
+    ado_base::rates::{LocalRate, LocalRateType, LocalRateValue, RatesResponse},
+    amp::{recipient::Recipient, AndrAddr},
+    common::{encode_binary, Funds},
+    testing::mock_querier::{MOCK_CW20_CONTRACT, MOCK_UANDR},
+};
 use cosmwasm_std::{
-    coin, coins,
+    attr, coin, coins,
     testing::{mock_env, mock_info},
-    BankMsg, CosmosMsg, Response, SubMsg, WasmMsg,
+    BankMsg, CosmosMsg, Event, Response, SubMsg, WasmMsg,
 };
 use cw20::{Cw20Coin, Cw20ExecuteMsg};
 
@@ -84,9 +81,7 @@ fn test_andr_receive() {
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
-        Response::new()
-            .add_attributes(vec![attr("action", "set_rate")])
-            .add_submessage(generate_economics_message("owner", "SetRate")),
+        Response::new().add_attributes(vec![attr("action", "set_rate")]),
         res
     );
 }

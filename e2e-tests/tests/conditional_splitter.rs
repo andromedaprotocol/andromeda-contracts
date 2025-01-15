@@ -3,7 +3,10 @@ use andromeda_app_contract::mock::{mock_andromeda_app, MockAppContract};
 
 use andromeda_testing::{mock::mock_app, mock_builder::MockAndromedaBuilder, MockContract};
 
-use andromeda_std::amp::Recipient;
+use andromeda_std::{
+    amp::{AndrAddr, Recipient},
+    os::adodb::ActionFee,
+};
 use cosmwasm_std::{coin, Decimal, Uint128};
 
 use andromeda_conditional_splitter::mock::{
@@ -23,6 +26,7 @@ fn test_conditional_splitter() {
             ("recipient1", vec![]),
             ("recipient2", vec![]),
             ("recipient3", vec![]),
+            ("recipient4", vec![coin(100000000, "uandr")]),
         ])
         .with_contracts(vec![
             ("app-contract", mock_andromeda_app()),
@@ -36,6 +40,7 @@ fn test_conditional_splitter() {
     let recipient_1 = andr.get_wallet("recipient1");
     let recipient_2 = andr.get_wallet("recipient2");
     let recipient_3 = andr.get_wallet("recipient3");
+    let recipient_4 = andr.get_wallet("recipient4");
 
     let app_code_id = andr.get_code_id(&mut router, "app-contract");
 
@@ -124,7 +129,7 @@ fn test_conditional_splitter() {
     // Third batch
     let token2 = coin(50_000, "uandr");
     splitter
-        .execute_send(&mut router, owner.clone(), &[token2])
+        .execute_send(&mut router, owner.clone(), &[token2.clone()])
         .unwrap();
 
     let balance_1 = router.wrap().query_balance(recipient_1, "uandr").unwrap();
@@ -173,4 +178,37 @@ fn test_conditional_splitter() {
 
     assert_eq!(uusd_balance_1.amount, Uint128::from(20u128));
     assert_eq!(uusd_balance_2.amount, Uint128::from(80u128));
+
+    // Economics Msg
+    andr.adodb
+        .execute(
+            &mut router,
+            &andromeda_std::os::adodb::ExecuteMsg::UpdateActionFees {
+                ado_type: "conditional-splitter".to_string(),
+                action_fees: vec![ActionFee {
+                    action: "Send".to_string(),
+                    asset: "native:uandr".to_string(),
+                    amount: Uint128::from(1u128),
+                    receiver: None,
+                }],
+            },
+            andr.get_wallet("admin").clone(),
+            &[],
+        )
+        .unwrap();
+
+    andr.economics
+        .execute(
+            &mut router,
+            &andromeda_std::os::economics::ExecuteMsg::Deposit {
+                address: Some(AndrAddr::from_string(recipient_4.to_string())),
+            },
+            owner.clone(),
+            &[coin(500, "uandr")],
+        )
+        .unwrap();
+
+    splitter
+        .execute_send(&mut router, owner.clone(), &[coin(50, "uandr")])
+        .unwrap();
 }

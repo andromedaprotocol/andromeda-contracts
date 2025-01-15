@@ -7,15 +7,14 @@ use andromeda_non_fungible_tokens::{
 };
 use andromeda_std::common::expiration::Expiry;
 use andromeda_std::{
-    common::{reply::ReplyId, MillisecondsExpiration},
+    common::MillisecondsExpiration,
     error::ContractError,
-    os::economics::ExecuteMsg as EconomicsExecuteMsg,
     testing::mock_querier::{MOCK_ADO_PUBLISHER, MOCK_KERNEL_CONTRACT},
 };
 use cosmwasm_std::{
     testing::{mock_env, mock_info},
-    to_json_binary, Addr, CosmosMsg, DepsMut, Env, Order, Response, Storage, SubMsg, Uint128,
-    Uint64, WasmMsg,
+    to_json_binary, Addr, CosmosMsg, DepsMut, Env, Order, Response, Storage, Uint128, Uint64,
+    WasmMsg,
 };
 
 use crate::{
@@ -250,20 +249,7 @@ mod test {
                     .add_attribute("level", valid_tier.level.to_string())
                     .add_attribute("label", valid_tier.label.clone())
                     .add_attribute("price", valid_tier.price.to_string())
-                    .add_attribute("limit", valid_tier.limit.unwrap().to_string())
-                    // Economics message
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(MOCK_DEFAULT_OWNER),
-                                action: "AddTier".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    .add_attribute("limit", valid_tier.limit.unwrap().to_string())),
             },
             TierTestCase {
                 name: "add_tier with unauthorized sender".to_string(),
@@ -356,20 +342,7 @@ mod test {
                     .add_attribute("level", valid_tier.level.to_string())
                     .add_attribute("label", valid_tier.label.clone())
                     .add_attribute("price", valid_tier.price.to_string())
-                    .add_attribute("limit", valid_tier.limit.unwrap().to_string())
-                    // Economics message
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(MOCK_DEFAULT_OWNER),
-                                action: "UpdateTier".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    .add_attribute("limit", valid_tier.limit.unwrap().to_string())),
             },
             TierTestCase {
                 name: "update_tier with unauthorized sender".to_string(),
@@ -459,19 +432,7 @@ mod test {
                 payee: MOCK_DEFAULT_OWNER.to_string(),
                 expected_res: Ok(Response::new()
                     .add_attribute("action", "remove_tier")
-                    .add_attribute("level", valid_tier.level.to_string())
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(MOCK_DEFAULT_OWNER),
-                                action: "RemoveTier".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    .add_attribute("level", valid_tier.level.to_string())),
             },
             TierTestCase {
                 name: "remove_tier with unauthorized sender".to_string(),
@@ -554,19 +515,7 @@ mod test {
                     .add_attribute(
                         "end_time",
                         Expiry::FromNow(Milliseconds::from_seconds(100)).to_string(),
-                    )
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(MOCK_DEFAULT_OWNER),
-                                action: "StartCampaign".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    )),
             },
             StartCampaignTestCase {
                 name: "start_campaign with unauthorized sender".to_string(),
@@ -701,19 +650,7 @@ mod test {
                         to_address: buyer.to_string(),
                         // Refund sent back as they only were able to mint one.
                         amount: coins(900, MOCK_NATIVE_DENOM),
-                    })
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(buyer),
-                                action: "PurchaseTiers".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    })),
                 payee: buyer.to_string(),
                 start_time: Some(past_time()),
                 end_time: future_time(&env),
@@ -907,19 +844,7 @@ mod test {
                             vec![],
                         )
                         .unwrap(),
-                    )
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(MOCK_CW20_CONTRACT),
-                                action: "Receive".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    )),
                 payee: buyer.to_string(),
                 start_time: Some(past_time()),
                 end_time: future_time(&env),
@@ -1128,19 +1053,7 @@ mod test {
                 expected_res: Ok(Response::new()
                     .add_attribute("action", "end_campaign")
                     .add_attribute("result", CampaignStage::SUCCESS.to_string())
-                    .add_submessage(amp_msg)
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(MOCK_DEFAULT_OWNER.to_string()),
-                                action: "EndCampaign".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    .add_submessage(amp_msg)),
                 expected_stage: CampaignStage::SUCCESS,
             },
             EndCampaignTestCase {
@@ -1164,19 +1077,7 @@ mod test {
                             vec![],
                         )
                         .unwrap(),
-                    )
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(MOCK_DEFAULT_OWNER.to_string()),
-                                action: "EndCampaign".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    )),
                 expected_stage: CampaignStage::SUCCESS,
             },
             EndCampaignTestCase {
@@ -1189,19 +1090,7 @@ mod test {
                 denom: Asset::Cw20Token(AndrAddr::from_string(MOCK_CW20_CONTRACT.to_string())),
                 expected_res: Ok(Response::new()
                     .add_attribute("action", "end_campaign")
-                    .add_attribute("result", CampaignStage::FAILED.to_string())
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(MOCK_DEFAULT_OWNER.to_string()),
-                                action: "EndCampaign".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    .add_attribute("result", CampaignStage::FAILED.to_string())),
                 expected_stage: CampaignStage::FAILED,
             },
             EndCampaignTestCase {
@@ -1314,19 +1203,7 @@ mod test {
                 denom: Asset::NativeToken(MOCK_NATIVE_DENOM.to_string()),
                 expected_res: Ok(Response::new()
                     .add_attribute("action", "discard_campaign")
-                    .add_attribute("result", "DISCARDED")
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: Addr::unchecked(MOCK_DEFAULT_OWNER),
-                                action: "DiscardCampaign".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    .add_attribute("result", "DISCARDED")),
                 expected_stage: CampaignStage::DISCARDED,
             },
             DiscardCampaign {
@@ -1462,19 +1339,7 @@ mod test {
                         })
                         .unwrap(),
                         funds: vec![],
-                    }))
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: orderer.clone(),
-                                action: "Claim".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    }))),
             },
             ClaimTestCase {
                 name: "Claim when native token accepting campaign failed ".to_string(),
@@ -1499,19 +1364,7 @@ mod test {
                     .add_message(BankMsg::Send {
                         to_address: orderer.to_string(),
                         amount: coins(10, MOCK_NATIVE_DENOM), // only non presale order refunded
-                    })
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: orderer.clone(),
-                                action: "Claim".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    })),
             },
             ClaimTestCase {
                 name: "Claim when cw20 accepting campaign failed ".to_string(),
@@ -1543,19 +1396,7 @@ mod test {
                             vec![],
                         )
                         .unwrap(),
-                    )
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(WasmMsg::Execute {
-                            contract_addr: "economics_contract".to_string(),
-                            msg: to_json_binary(&EconomicsExecuteMsg::PayFee {
-                                payee: orderer.clone(),
-                                action: "Claim".to_string(),
-                            })
-                            .unwrap(),
-                            funds: vec![],
-                        }),
-                        ReplyId::PayFee.repr(),
-                    ))),
+                    )),
             },
             ClaimTestCase {
                 name: "Claim without purchasing in successful campaign".to_string(),

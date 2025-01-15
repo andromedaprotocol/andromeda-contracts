@@ -182,7 +182,6 @@ impl AOSQuerier {
             &[ado_type.as_bytes(), action.as_bytes()],
         )?;
         let fee: Option<ActionFee> = AOSQuerier::query_storage(querier, adodb_addr, &key)?;
-
         Ok(fee)
     }
 

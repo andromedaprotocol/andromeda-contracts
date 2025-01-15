@@ -27,7 +27,7 @@ fn init(deps: DepsMut, default_validator: Addr) -> Result<Response, ContractErro
 
 #[test]
 fn test_instantiate() {
-    let mut deps = mock_dependencies_custom();
+    let mut deps = mock_dependencies_custom(&[]);
 
     let fake_validator = Addr::unchecked("fake_validator");
     let res = init(deps.as_mut(), fake_validator);
@@ -40,7 +40,7 @@ fn test_instantiate() {
 
 #[test]
 fn test_stake_with_invalid_funds() {
-    let mut deps = mock_dependencies_custom();
+    let mut deps = mock_dependencies_custom(&[]);
     let default_validator = Addr::unchecked(DEFAULT_VALIDATOR);
     init(deps.as_mut(), default_validator).unwrap();
 
@@ -55,7 +55,7 @@ fn test_stake_with_invalid_funds() {
 
 #[test]
 fn test_stake_with_default_validator() {
-    let mut deps = mock_dependencies_custom();
+    let mut deps = mock_dependencies_custom(&[]);
     let default_validator = Addr::unchecked(DEFAULT_VALIDATOR);
     init(deps.as_mut(), default_validator).unwrap();
 
@@ -80,7 +80,7 @@ fn test_stake_with_default_validator() {
 
 #[test]
 fn test_stake_with_validator() {
-    let mut deps = mock_dependencies_custom();
+    let mut deps = mock_dependencies_custom(&[]);
     let default_validator = Addr::unchecked(DEFAULT_VALIDATOR);
     let valid_validator = Addr::unchecked(VALID_VALIDATOR);
     init(deps.as_mut(), default_validator).unwrap();
@@ -108,7 +108,7 @@ fn test_stake_with_validator() {
 
 #[test]
 fn test_stake_with_invalid_validator() {
-    let mut deps = mock_dependencies_custom();
+    let mut deps = mock_dependencies_custom(&[]);
     let fake_validator = Addr::unchecked("fake_validator");
     let default_validator = Addr::unchecked(DEFAULT_VALIDATOR);
     init(deps.as_mut(), default_validator).unwrap();
@@ -126,7 +126,7 @@ fn test_stake_with_invalid_validator() {
 
 #[test]
 fn test_unauthorized_unstake() {
-    let mut deps = mock_dependencies_custom();
+    let mut deps = mock_dependencies_custom(&[]);
     let default_validator = Addr::unchecked(DEFAULT_VALIDATOR);
     let valid_validator = Addr::unchecked(VALID_VALIDATOR);
     init(deps.as_mut(), default_validator).unwrap();
