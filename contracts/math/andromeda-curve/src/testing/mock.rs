@@ -10,7 +10,7 @@ use andromeda_std::{
 use cosmwasm_std::{
     from_json,
     testing::{mock_env, mock_info, MockApi, MockStorage},
-    Deps, DepsMut, MessageInfo, OwnedDeps, Response,
+    Decimal, Deps, DepsMut, MessageInfo, OwnedDeps, Response,
 };
 
 use crate::contract::{execute, instantiate, query};
@@ -78,7 +78,7 @@ pub fn query_curve_config(deps: Deps) -> Result<GetCurveConfigResponse, Contract
 
 pub fn query_plot_y_from_x(
     deps: Deps,
-    x_value: f64,
+    x_value: Decimal,
 ) -> Result<GetPlotYFromXResponse, ContractError> {
     let res = query(deps, mock_env(), QueryMsg::GetPlotYFromX { x_value });
     match res {

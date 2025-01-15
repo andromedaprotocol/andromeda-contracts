@@ -1,6 +1,6 @@
 use andromeda_std::{amp::AndrAddr, andr_exec, andr_instantiate, andr_query, error::ContractError};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::ensure;
+use cosmwasm_std::{ensure, Decimal};
 
 #[andr_instantiate]
 #[cw_serde]
@@ -60,7 +60,7 @@ pub enum QueryMsg {
     #[returns(GetCurveConfigResponse)]
     GetCurveConfig {},
     #[returns(GetPlotYFromXResponse)]
-    GetPlotYFromX { x_value: f64 },
+    GetPlotYFromX { x_value: Decimal },
 }
 
 #[cw_serde]

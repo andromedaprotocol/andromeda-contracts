@@ -15,7 +15,8 @@ use andromeda_std::{
 };
 
 use cosmwasm_std::{
-    entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, Storage,
+    entry_point, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
+    Storage,
 };
 
 use cw_utils::nonpayable;
@@ -170,7 +171,7 @@ pub fn query_curve_config(storage: &dyn Storage) -> Result<GetCurveConfigRespons
 
 pub fn query_plot_y_from_x(
     storage: &dyn Storage,
-    x_value: f64,
+    x_value: Decimal,
 ) -> Result<GetPlotYFromXResponse, ContractError> {
     let curve_config = CURVE_CONFIG.load(storage)?;
 
@@ -181,18 +182,45 @@ pub fn query_plot_y_from_x(
             multiple_variable_value,
             constant_value,
         } => {
-            let curve_id_f64 = match curve_type {
-                CurveType::Growth => 1_f64,
-                CurveType::Decay => -1_f64,
-            };
-            let base_value_f64 = base_value as f64;
-            let constant_value_f64 = constant_value.unwrap_or(DEFAULT_CONSTANT_VALUE) as f64;
-            let multiple_variable_value_f64 =
-                multiple_variable_value.unwrap_or(DEFAULT_MULTIPLE_VARIABLE_VALUE) as f64;
+            let base_value_decimal = Decimal::percent(base_value * 100);
+            let constant_value_decimal =
+                Decimal::percent(constant_value.unwrap_or(DEFAULT_CONSTANT_VALUE) * 100);
+            let multiple_variable_value_decimal = Decimal::percent(
+                multiple_variable_value.unwrap_or(DEFAULT_MULTIPLE_VARIABLE_VALUE) * 100,
+            );
 
-            (constant_value_f64
-                * base_value_f64.powf(curve_id_f64 * multiple_variable_value_f64 * x_value))
-            .to_string()
+            let exponent_value = multiple_variable_value_decimal
+                .checked_mul(x_value)
+                .map_err(|_| ContractError::Overflow {})?
+                .atomics();
+
+            let exponent_u32 = if exponent_value.u128() > u128::from(u32::MAX) {
+                return Err(ContractError::CustomError {
+                    msg: "Exponent value exceeds u32::MAX.".to_string(),
+                });
+            } else {
+                u32::try_from(exponent_value.u128()).map_err(|_| ContractError::CustomError {
+                    msg: "Failed to convert exponent to u32.".to_string(),
+                })?
+            };
+
+            // The argument of the checked_pow() must be u32, can not be other types
+            let res = constant_value_decimal
+                .checked_mul(
+                    base_value_decimal
+                        .checked_pow(exponent_u32)
+                        .map_err(|_| ContractError::Overflow {})?,
+                )
+                .map_err(|_| ContractError::Overflow {})?;
+
+            let res_by_curve_type = match curve_type {
+                CurveType::Growth => res,
+                CurveType::Decay => Decimal::one()
+                    .checked_div(res)
+                    .map_err(|_| ContractError::Underflow {})?,
+            };
+
+            res_by_curve_type.to_string()
         }
     };
 

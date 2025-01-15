@@ -80,7 +80,7 @@ impl MockCurve {
         res
     }
 
-    pub fn query_plot_y_from_x(&self, app: &mut MockApp, x_value: f64) -> GetPlotYFromXResponse {
+    pub fn query_plot_y_from_x(&self, app: &mut MockApp, x_value: u64) -> GetPlotYFromXResponse {
         let msg = QueryMsg::GetPlotYFromX { x_value };
         let res: GetPlotYFromXResponse = self.query(app, msg);
         res
