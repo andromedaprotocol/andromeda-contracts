@@ -60,13 +60,13 @@ pub fn instantiate(
                 deps.storage,
                 UPDATE_CURVE_CONFIG_ACTION,
                 addr.clone(),
-                Permission::Local(LocalPermission::Whitelisted(None)),
+                Permission::Local(LocalPermission::whitelisted(None, None)),
             )?;
             ADOContract::set_permission(
                 deps.storage,
                 RESET_ACTION,
                 addr.clone(),
-                Permission::Local(LocalPermission::Whitelisted(None)),
+                Permission::Local(LocalPermission::whitelisted(None, None)),
             )?;
         }
     }
@@ -200,8 +200,8 @@ pub fn query_plot_y_from_x(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    ADOContract::default().migrate(deps, CONTRACT_NAME, CONTRACT_VERSION)
+pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    ADOContract::default().migrate(deps, env, CONTRACT_NAME, CONTRACT_VERSION)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

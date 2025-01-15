@@ -134,6 +134,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    ADOContract::default().migrate(deps, CONTRACT_NAME, CONTRACT_VERSION)
+pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    ADOContract::default().migrate(deps, env, CONTRACT_NAME, CONTRACT_VERSION)
 }

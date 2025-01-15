@@ -315,7 +315,7 @@ fn execute_start_auction(
                 deps.storage,
                 auction_id.to_string(),
                 whitelisted_address,
-                Permission::Local(LocalPermission::Whitelisted(None)),
+                Permission::Local(LocalPermission::whitelisted(None, None)),
             )?;
         }
     };
@@ -438,7 +438,7 @@ fn execute_update_auction(
                 deps.storage,
                 token_auction_state.auction_id.to_string(),
                 whitelisted_address,
-                Permission::Local(LocalPermission::Whitelisted(None)),
+                Permission::Local(LocalPermission::whitelisted(None, None)),
             )?;
         }
     };
@@ -1409,8 +1409,8 @@ fn query_authorized_addresses(
     Ok(AuthorizedAddressesResponse { addresses })
 }
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    ADOContract::default().migrate(deps, CONTRACT_NAME, CONTRACT_VERSION)
+pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    ADOContract::default().migrate(deps, env, CONTRACT_NAME, CONTRACT_VERSION)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -57,7 +57,7 @@ pub fn instantiate(
         deps.storage,
         STORE_DENOM_INFO,
         service_address.clone(),
-        Permission::Local(LocalPermission::Whitelisted(None)),
+        Permission::Local(LocalPermission::whitelisted(None, None)),
     )?;
 
     Ok(resp.add_attribute("service_address", service_address))
@@ -190,8 +190,8 @@ pub fn get_all_denom_info(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    ADOContract::default().migrate(deps, CONTRACT_NAME, CONTRACT_VERSION)
+pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    ADOContract::default().migrate(deps, env, CONTRACT_NAME, CONTRACT_VERSION)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

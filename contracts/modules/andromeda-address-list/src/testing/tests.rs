@@ -26,7 +26,7 @@ fn init(deps: DepsMut, info: MessageInfo) {
             owner: None,
             actor_permission: Some(ActorPermission {
                 actors: vec![AndrAddr::from_string("actor")],
-                permission: LocalPermission::whitelisted(None),
+                permission: LocalPermission::whitelisted(None, None),
             }),
         },
     )

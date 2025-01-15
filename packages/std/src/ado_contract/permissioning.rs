@@ -254,6 +254,12 @@ impl ADOContract<'_> {
         Ok(())
     }
 
+    /// Removes the permission for the given action and actor
+    pub fn clear_all_permissions(store: &mut dyn Storage) -> Result<(), ContractError> {
+        permissions().clear(store);
+        Ok(())
+    }
+
     /// Execute handler for setting permission
     ///
     /// **Whitelisted/Limited permissions will only work for permissioned actions**
@@ -279,6 +285,7 @@ impl ADOContract<'_> {
             actor_addrs.push(actor_addr);
         }
 
+        permission.validate_times(&ctx.env)?;
         for actor_addr in actor_addrs.clone() {
             Self::set_permission(
                 ctx.deps.storage,
@@ -335,6 +342,20 @@ impl ADOContract<'_> {
             ("actors", &actor_strs),
             ("action", action.as_str()),
         ]))
+    }
+
+    /// Execute handler for clearing all permissions
+    pub fn execute_clear_all_permissions(
+        &self,
+        ctx: ExecuteContext,
+    ) -> Result<Response, ContractError> {
+        ensure!(
+            Self::is_contract_owner(self, ctx.deps.storage, ctx.info.sender.as_str())?,
+            ContractError::Unauthorized {}
+        );
+        Self::clear_all_permissions(ctx.deps.storage)?;
+
+        Ok(Response::default().add_attributes(vec![("action", "clear_all_permissions")]))
     }
 
     /// Enables permissioning for a given action
@@ -549,6 +570,7 @@ mod tests {
     };
 
     use super::*;
+    use rstest::*;
 
     #[test]
     fn test_permissioned_action() {
@@ -570,7 +592,10 @@ mod tests {
         let res = contract.is_permissioned(deps.as_mut(), env.clone(), action, actor);
 
         assert!(res.is_err());
-        let permission = Permission::Local(LocalPermission::Whitelisted(None));
+        let permission = Permission::Local(LocalPermission::Whitelisted {
+            start: None,
+            expiration: None,
+        });
         ADOContract::set_permission(deps.as_mut().storage, action, actor, permission).unwrap();
 
         let res = contract.is_permissioned(deps.as_mut(), env.clone(), action, actor);
@@ -584,6 +609,7 @@ mod tests {
 
         assert!(res.is_err());
         let permission = Permission::Local(LocalPermission::Limited {
+            start: None,
             expiration: None,
             uses: 1,
         });
@@ -609,7 +635,10 @@ mod tests {
             .permission_action(action, deps.as_mut().storage)
             .unwrap();
         // Test Blacklisted
-        let permission = Permission::Local(LocalPermission::Blacklisted(None));
+        let permission = Permission::Local(LocalPermission::Blacklisted {
+            start: None,
+            expiration: None,
+        });
         ADOContract::set_permission(deps.as_mut().storage, action, actor, permission).unwrap();
 
         let res = contract.is_permissioned(deps.as_mut(), env, action, actor);
@@ -634,7 +663,10 @@ mod tests {
             .unwrap();
 
         // Test Blacklisted
-        let permission = Permission::Local(LocalPermission::Blacklisted(None));
+        let permission = Permission::Local(LocalPermission::Blacklisted {
+            start: None,
+            expiration: None,
+        });
         ADOContract::set_permission(deps.as_mut().storage, action, actor, permission).unwrap();
 
         let res = contract.is_permissioned(deps.as_mut(), env, action, actor);
@@ -657,7 +689,10 @@ mod tests {
         let res = contract.is_permissioned_strict(deps.as_mut(), env.clone(), action, actor);
         assert!(res.is_err());
 
-        let permission = Permission::Local(LocalPermission::Whitelisted(None));
+        let permission = Permission::Local(LocalPermission::Whitelisted {
+            start: None,
+            expiration: None,
+        });
         ADOContract::set_permission(deps.as_mut().storage, action, actor, permission).unwrap();
 
         let res = contract.is_permissioned_strict(deps.as_mut(), env, action, actor);
@@ -695,7 +730,10 @@ mod tests {
         let msg = AndromedaMsg::Permissioning(PermissioningMessage::SetPermission {
             actors: vec![AndrAddr::from_string("actor")],
             action: "action".to_string(),
-            permission: Permission::Local(LocalPermission::Whitelisted(None)),
+            permission: Permission::Local(LocalPermission::Whitelisted {
+                start: None,
+                expiration: None,
+            }),
         });
         let ctx = ExecuteContext::new(deps.as_mut(), mock_info("attacker", &[]), env);
         let res = contract.execute(ctx, msg);
@@ -788,7 +826,10 @@ mod tests {
         assert!(res.is_err());
 
         // Test Whitelist
-        let permission = Permission::Local(LocalPermission::Whitelisted(Some(expiration.clone())));
+        let permission = Permission::Local(LocalPermission::Whitelisted {
+            start: None,
+            expiration: Some(expiration.clone()),
+        });
         ADOContract::set_permission(deps.as_mut().storage, action, actor, permission).unwrap();
 
         let res = contract.is_permissioned(deps.as_mut(), env.clone(), action, actor);
@@ -801,7 +842,10 @@ mod tests {
 
         env.block.time = MillisecondsExpiration::from_seconds(0).into();
         // Test Blacklist
-        let permission = Permission::Local(LocalPermission::Blacklisted(Some(expiration.clone())));
+        let permission = Permission::Local(LocalPermission::Blacklisted {
+            start: None,
+            expiration: Some(expiration.clone()),
+        });
         ADOContract::set_permission(deps.as_mut().storage, action, actor, permission).unwrap();
 
         let res = contract.is_permissioned(deps.as_mut(), env.clone(), action, actor);
@@ -818,6 +862,110 @@ mod tests {
         // Action is no longer permissioned so this should pass
         let res = contract.is_permissioned(deps.as_mut(), env, action, actor);
         assert!(res.is_ok());
+    }
+
+    #[fixture]
+    fn contract<'a>() -> ADOContract<'a> {
+        ADOContract::default()
+    }
+
+    #[fixture]
+    fn action() -> &'static str {
+        "action"
+    }
+
+    #[fixture]
+    fn actor() -> &'static str {
+        "actor"
+    }
+
+    #[fixture]
+    fn start_time() -> u64 {
+        2
+    }
+
+    #[fixture]
+    fn start(start_time: u64) -> Option<Expiry> {
+        Some(Expiry::AtTime(MillisecondsExpiration::from_seconds(
+            start_time,
+        )))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[rstest]
+    #[case(true, true, false, true)] // Whitelist, at start time, should succeed
+    #[case(true, false, false, false)] // Whitelist, before start time, should error
+    #[case(true, false, true, true)] // Whitelist, after start time, should succeed
+    #[case(false, false, false, true)] // Blacklist, before start time, should succeed
+    #[case(false, true, false, false)] // Blacklist, at start time, should error
+    #[case(false, false, true, false)] // Blacklist, after start time, should error
+    fn test_permission_start_time(
+        contract: ADOContract,
+        action: &str,
+        actor: &str,
+        start_time: u64,
+        start: Option<Expiry>,
+        #[case] is_whitelisted: bool,
+        #[case] is_at_start_time: bool,
+        #[case] is_after_start_time: bool,
+        #[case] expected_success: bool,
+    ) {
+        let mut deps = mock_dependencies();
+        let mut env = mock_env();
+
+        env.block.time = MillisecondsExpiration::from_seconds(if is_at_start_time {
+            start_time
+        } else if is_after_start_time {
+            start_time + 1
+        } else {
+            0
+        })
+        .into();
+
+        contract
+            .owner
+            .save(deps.as_mut().storage, &Addr::unchecked("owner"))
+            .unwrap();
+
+        ADOContract::default()
+            .permission_action(action, deps.as_mut().storage)
+            .unwrap();
+
+        let permission = if is_whitelisted {
+            Permission::Local(LocalPermission::Whitelisted {
+                start,
+                expiration: None,
+            })
+        } else {
+            Permission::Local(LocalPermission::Blacklisted {
+                start,
+                expiration: None,
+            })
+        };
+
+        ADOContract::set_permission(deps.as_mut().storage, action, actor, permission).unwrap();
+
+        let res = contract.is_permissioned(deps.as_mut(), env.clone(), action, actor);
+
+        if expected_success {
+            assert!(res.is_ok());
+        } else {
+            assert!(res.is_err());
+        }
+    }
+
+    #[rstest]
+    fn test_permission_start_time_disabled_action(action: &str, actor: &str) {
+        let mut deps = mock_dependencies();
+        let mut env = mock_env();
+        let contract = ADOContract::default();
+
+        env.block.time = MillisecondsExpiration::from_seconds(0).into();
+
+        ADOContract::default().disable_action_permission(action, deps.as_mut().storage);
+
+        let res = contract.is_permissioned(deps.as_mut(), env, action, actor);
+        assert!(res.is_err());
     }
 
     #[test]
@@ -860,7 +1008,10 @@ mod tests {
         .unwrap());
 
         let mut context = ExecuteContext::new(deps.as_mut(), info.clone(), env.clone());
-        let permission = Permission::Local(LocalPermission::Whitelisted(None));
+        let permission = Permission::Local(LocalPermission::Whitelisted {
+            start: None,
+            expiration: None,
+        });
         ADOContract::set_permission(context.deps.storage, action, actor, permission).unwrap();
 
         assert!(is_context_permissioned(
@@ -938,7 +1089,7 @@ mod tests {
 
         let amp_ctx = AMPPkt::new("mock_actor", "owner", vec![]);
         let mut context =
-            ExecuteContext::new(deps.as_mut(), unauth_info, env.clone()).with_ctx(amp_ctx);
+            ExecuteContext::new(deps.as_mut(), unauth_info.clone(), env.clone()).with_ctx(amp_ctx);
 
         assert!(is_context_permissioned(
             &mut context.deps,
@@ -952,7 +1103,11 @@ mod tests {
         let previous_sender = "previous_sender";
         let mut context = ExecuteContext::new(deps.as_mut(), info.clone(), env.clone())
             .with_ctx(AMPPkt::new(info.sender, previous_sender, vec![]));
-        let permission = Permission::Local(LocalPermission::limited(None, 1));
+        let permission = Permission::Local(LocalPermission::Limited {
+            start: None,
+            expiration: None,
+            uses: 1,
+        });
         ADOContract::set_permission(context.deps.storage, action, actor, permission.clone())
             .unwrap();
         ADOContract::set_permission(
@@ -979,7 +1134,7 @@ mod tests {
         assert_eq!(previous_sender_permission, Some(permission));
         assert_eq!(
             actor_permission,
-            Some(Permission::Local(LocalPermission::limited(None, 0)))
+            Some(Permission::Local(LocalPermission::limited(None, None, 0)))
         );
     }
 
@@ -1009,7 +1164,7 @@ mod tests {
         .unwrap());
 
         let context = ExecuteContext::new(deps.as_mut(), info, env.clone());
-        let permission = Permission::Local(LocalPermission::Whitelisted(None));
+        let permission = Permission::Local(LocalPermission::whitelisted(None, None));
         ADOContract::set_permission(context.deps.storage, action, actor, permission).unwrap();
 
         assert!(is_context_permissioned_strict(
@@ -1083,7 +1238,7 @@ mod tests {
 
         assert!(permissions.is_empty());
 
-        let permission = Permission::Local(LocalPermission::Whitelisted(None));
+        let permission = Permission::Local(LocalPermission::whitelisted(None, None));
         let action = "action";
 
         ADOContract::set_permission(deps.as_mut().storage, action, actor, permission.clone())
@@ -1100,19 +1255,19 @@ mod tests {
         let multi_permissions = vec![
             (
                 "action2".to_string(),
-                Permission::Local(LocalPermission::Blacklisted(None)),
+                Permission::Local(LocalPermission::blacklisted(None, None)),
             ),
             (
                 "action3".to_string(),
-                Permission::Local(LocalPermission::Whitelisted(None)),
+                Permission::Local(LocalPermission::whitelisted(None, None)),
             ),
             (
                 "action4".to_string(),
-                Permission::Local(LocalPermission::Blacklisted(None)),
+                Permission::Local(LocalPermission::blacklisted(None, None)),
             ),
             (
                 "action5".to_string(),
-                Permission::Local(LocalPermission::Whitelisted(None)),
+                Permission::Local(LocalPermission::whitelisted(None, None)),
             ),
         ];
 

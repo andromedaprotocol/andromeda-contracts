@@ -139,7 +139,7 @@ pub fn authorize_addresses(
             deps.storage,
             action,
             addr.to_string(),
-            Permission::Local(LocalPermission::Whitelisted(None)),
+            Permission::Local(LocalPermission::whitelisted(None, None)),
         )?;
     }
     Ok(())
@@ -159,8 +159,8 @@ pub fn execute_authorize_contract(
     );
 
     let permission = expiration.map_or(
-        Permission::Local(LocalPermission::Whitelisted(None)),
-        |expiration| Permission::Local(LocalPermission::Whitelisted(Some(expiration))),
+        Permission::Local(LocalPermission::whitelisted(None, None)),
+        |expiration| Permission::Local(LocalPermission::whitelisted(None, Some(expiration))),
     );
 
     ADOContract::set_permission(

@@ -6,26 +6,24 @@ use {
     std::ops::Deref,
 };
 
-use crate::ado_contract::ADOContract;
-use crate::amp::addresses::AndrAddr;
-use crate::amp::messages::AMPPkt;
-use crate::common::context::ExecuteContext;
-use crate::common::reply::ReplyId;
-use crate::error::from_semver;
-use crate::os::{aos_querier::AOSQuerier, economics::ExecuteMsg as EconomicsExecuteMsg};
 use crate::{
-    ado_base::{AndromedaMsg, InstantiateMsg},
-    error::ContractError,
+    ado_base::{
+        permissioning::{LocalPermission, Permission},
+        AndromedaMsg, InstantiateMsg,
+    },
+    ado_contract::ADOContract,
+    amp::{addresses::AndrAddr, messages::AMPPkt},
+    common::{context::ExecuteContext, reply::ReplyId},
+    error::{from_semver, ContractError},
+    os::{aos_querier::AOSQuerier, economics::ExecuteMsg as EconomicsExecuteMsg},
 };
 use cosmwasm_std::{
     attr, ensure, from_json, to_json_binary, Addr, Api, ContractInfoResponse, CosmosMsg, Deps,
     DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdError, Storage, SubMsg, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
-
 use semver::Version;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
 type ExecuteContextFunction<M, E> = fn(ExecuteContext, M) -> Result<Response, E>;
 
@@ -122,7 +120,8 @@ impl ADOContract<'_> {
 
     pub fn migrate(
         &self,
-        deps: DepsMut,
+        mut deps: DepsMut,
+        env: Env,
         contract_name: &str,
         contract_version: &str,
     ) -> Result<Response, ContractError> {
@@ -153,6 +152,84 @@ impl ADOContract<'_> {
                 previous_contract: stored.version,
             }
         );
+        let owner = self.owner.load(deps.storage)?;
+
+        // Get all permissioned actions and actors in one pass
+        let permissioned_actions = self.query_permissioned_actions(deps.as_ref())?;
+        if !permissioned_actions.is_empty() {
+            // Iterate through all actions
+            for action in &permissioned_actions {
+                let actors = self.query_permissioned_actors(
+                    deps.as_ref(),
+                    action.clone(),
+                    None,
+                    None,
+                    None,
+                )?;
+
+                for actor in actors {
+                    // Check permission structure for each actor
+                    let permissions = self.query_permissions(deps.as_ref(), &actor, None, None)?;
+                    // Iterate through all permissions instead of just checking the first one
+                    for permission in permissions {
+                        let local_permission = permission
+                            .permission
+                            .clone()
+                            .get_permission(deps.as_ref(), actor.as_str())?;
+
+                        // Check if using old permission structure (without 'start' variant)
+                        let json_str = String::from_utf8(to_json_binary(&local_permission)?.0)?;
+                        if !json_str.contains("start") {
+                            let ctx = ExecuteContext::new(
+                                deps.branch(),
+                                MessageInfo {
+                                    sender: owner.clone(),
+                                    funds: vec![],
+                                },
+                                env.clone(),
+                            );
+
+                            // Determine permission type from JSON structure
+                            if json_str.contains("whitelisted") {
+                                self.execute_set_permission(
+                                    ctx,
+                                    vec![AndrAddr::from_string(actor.clone())],
+                                    action.clone(),
+                                    Permission::Local(LocalPermission::Whitelisted {
+                                        start: None,
+                                        expiration: None,
+                                    }),
+                                )?;
+                            } else if json_str.contains("blacklisted") {
+                                self.execute_set_permission(
+                                    ctx,
+                                    vec![AndrAddr::from_string(actor.clone())],
+                                    action.clone(),
+                                    Permission::Local(LocalPermission::Blacklisted {
+                                        start: None,
+                                        expiration: None,
+                                    }),
+                                )?;
+                            } else if json_str.contains("limited") {
+                                self.execute_set_permission(
+                                    ctx,
+                                    vec![AndrAddr::from_string(actor.clone())],
+                                    action.clone(),
+                                    Permission::Local(LocalPermission::Limited {
+                                        start: None,
+                                        expiration: None,
+                                        uses: 0,
+                                    }),
+                                )?;
+                            }
+                        } else {
+                            // If one permission is up to date, we assume that all of them are
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
         #[cfg(feature = "rates")]
         {
@@ -186,7 +263,7 @@ impl ADOContract<'_> {
                                 )?)
                                 .is_ok()
                                 {
-                                    self.rates.clear(deps.storage);
+                                    self.rates.clear(deps.branch().storage);
                                 }
                                 break;
                             }
@@ -196,9 +273,10 @@ impl ADOContract<'_> {
             }
         }
 
-        set_contract_version(deps.storage, contract_name, contract_version)?;
+        set_contract_version(deps.branch().storage, contract_name, contract_version)?;
         Ok(Response::default())
     }
+
     /// Validates all provided `AndrAddr` addresses.
     ///
     /// Requires the VFS address to be set if any address is a VFS path.
@@ -353,45 +431,221 @@ mod tests {
     use crate::testing::mock_querier::MOCK_KERNEL_CONTRACT;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 
-    #[test]
-    fn test_update_app_contract() {
-        let contract = ADOContract::default();
-        let mut deps = mock_dependencies();
+    mod app_contract {
+        use super::*;
 
-        let info = mock_info("owner", &[]);
-        let deps_mut = deps.as_mut();
-        contract
-            .instantiate(
-                deps_mut.storage,
-                mock_env(),
-                deps_mut.api,
-                &deps_mut.querier,
-                info.clone(),
-                InstantiateMsg {
-                    ado_type: "type".to_string(),
-                    ado_version: "version".to_string(),
+        #[test]
+        fn test_update_app_contract() {
+            let contract = ADOContract::default();
+            let mut deps = mock_dependencies();
 
-                    kernel_address: MOCK_KERNEL_CONTRACT.to_string(),
-                    owner: None,
-                },
-            )
-            .unwrap();
+            let info = mock_info("owner", &[]);
+            let deps_mut = deps.as_mut();
+            contract
+                .instantiate(
+                    deps_mut.storage,
+                    mock_env(),
+                    deps_mut.api,
+                    &deps_mut.querier,
+                    info.clone(),
+                    InstantiateMsg {
+                        ado_type: "type".to_string(),
+                        ado_version: "version".to_string(),
+                        kernel_address: MOCK_KERNEL_CONTRACT.to_string(),
+                        owner: None,
+                    },
+                )
+                .unwrap();
 
-        let address = String::from("address");
+            let address = String::from("address");
+            let msg = AndromedaMsg::UpdateAppContract {
+                address: address.clone(),
+            };
 
-        let msg = AndromedaMsg::UpdateAppContract {
-            address: address.clone(),
-        };
+            let res = contract
+                .execute(ExecuteContext::new(deps.as_mut(), info, mock_env()), msg)
+                .unwrap();
 
-        let res = contract
-            .execute(ExecuteContext::new(deps.as_mut(), info, mock_env()), msg)
-            .unwrap();
+            assert_eq!(
+                Response::new()
+                    .add_attribute("action", "update_app_contract")
+                    .add_attribute("address", address),
+                res
+            );
+        }
+    }
 
-        assert_eq!(
-            Response::new()
-                .add_attribute("action", "update_app_contract")
-                .add_attribute("address", address),
-            res
-        );
+    mod permissions {
+        use super::*;
+        use cosmwasm_schema::cw_serde;
+        use cosmwasm_std::to_json_binary;
+        use rstest::rstest;
+
+        // Old permission structure without 'start'
+        #[cw_serde]
+        enum OldLocalPermission {
+            Whitelisted { expiration: Option<u64> },
+            Blacklisted { expiration: Option<u64> },
+            Limited { expiration: Option<u64>, uses: u64 },
+        }
+
+        #[rstest]
+        #[case(
+            OldLocalPermission::Whitelisted { expiration: None },
+            LocalPermission::Whitelisted { start: None, expiration: None },
+            "whitelisted"
+        )]
+        #[case(
+            OldLocalPermission::Blacklisted { expiration: None },
+            LocalPermission::Blacklisted { start: None, expiration: None },
+            "blacklisted"
+        )]
+        #[case(
+            OldLocalPermission::Limited { expiration: None, uses: 5 },
+            LocalPermission::Limited { start: None, expiration: None, uses: 5 },
+            "limited"
+        )]
+        fn test_permission_formats(
+            #[case] old_permission: OldLocalPermission,
+            #[case] new_permission: LocalPermission,
+            #[case] permission_type: &str,
+        ) {
+            // Serialize old and new permissions to JSON
+            let old_json = String::from_utf8(to_json_binary(&old_permission).unwrap().0).unwrap();
+            let new_json = String::from_utf8(to_json_binary(&new_permission).unwrap().0).unwrap();
+
+            // Assert old format JSON
+            assert!(!old_json.contains("start"));
+            assert!(old_json.contains(permission_type));
+
+            // Assert new format JSON
+            assert!(new_json.contains("start"));
+            assert!(new_json.contains(permission_type));
+        }
+    }
+    #[cfg(feature = "rates")]
+    mod rates {
+        use super::*;
+
+        use crate::ado_base::rates::{LocalRate, LocalRateType, PercentRate};
+        use cosmwasm_std::Decimal;
+
+        #[test]
+        fn test_rates_migration() {
+            let contract = ADOContract::default();
+            let mut deps = mock_dependencies();
+
+            // Setup initial contract state
+            let info = mock_info("owner", &[]);
+            let deps_mut = deps.as_mut();
+            contract
+                .instantiate(
+                    deps_mut.storage,
+                    mock_env(),
+                    deps_mut.api,
+                    &deps_mut.querier,
+                    info.clone(),
+                    InstantiateMsg {
+                        ado_type: "marketplace".to_string(),
+                        ado_version: "1.0.0".to_string(),
+                        kernel_address: MOCK_KERNEL_CONTRACT.to_string(),
+                        owner: None,
+                    },
+                )
+                .unwrap();
+
+            // Set up a test rate
+            let rate = LocalRate {
+                rate_type: LocalRateType::Additive,
+                recipient: Recipient::from_string("recipient"),
+                value: crate::ado_base::rates::LocalRateValue::Percent(PercentRate {
+                    percent: Decimal::one(),
+                }),
+                description: None,
+            };
+
+            // Save the rate in storage
+            contract
+                .rates
+                .save(deps.as_mut().storage, "Claim", &Rate::Local(rate))
+                .unwrap();
+
+            // Verify rate is saved
+            let saved_rates = contract.get_all_rates(deps.as_ref()).unwrap();
+            assert_eq!(saved_rates.all_rates.len(), 1);
+
+            // Perform migration
+            contract
+                .migrate(deps.as_mut(), mock_env(), "marketplace", "2.0.0")
+                .unwrap();
+
+            // Verify rates were handled correctly during migration
+            let post_migration_rates = contract.get_all_rates(deps.as_ref()).unwrap();
+            assert_eq!(post_migration_rates.all_rates.len(), 1);
+        }
+    }
+
+    mod permissions_migration {
+        use super::*;
+        use crate::ado_base::permissioning::LocalPermission;
+
+        #[test]
+        fn test_permissions_migration() {
+            let contract = ADOContract::default();
+            let mut deps = mock_dependencies();
+
+            // Setup initial contract state
+            let info = mock_info("owner", &[]);
+            let deps_mut = deps.as_mut();
+            contract
+                .instantiate(
+                    deps_mut.storage,
+                    mock_env(),
+                    deps_mut.api,
+                    &deps_mut.querier,
+                    info.clone(),
+                    InstantiateMsg {
+                        ado_type: "marketplace".to_string(),
+                        ado_version: "1.0.0".to_string(),
+                        kernel_address: MOCK_KERNEL_CONTRACT.to_string(),
+                        owner: None,
+                    },
+                )
+                .unwrap();
+
+            // Set up a test permission
+            let permission = Permission::Local(LocalPermission::Whitelisted {
+                start: None,
+                expiration: None,
+            });
+
+            // Save the permission in storage
+            let ctx = ExecuteContext::new(deps.as_mut(), info, mock_env());
+            contract
+                .execute_set_permission(
+                    ctx,
+                    vec![AndrAddr::from_string("actor")],
+                    "test_action".to_string(),
+                    permission,
+                )
+                .unwrap();
+
+            // Verify permission is saved
+            let saved_permissions = contract
+                .query_permissions(deps.as_ref(), "actor", None, None)
+                .unwrap();
+            assert_eq!(saved_permissions.len(), 1);
+
+            // Perform migration
+            contract
+                .migrate(deps.as_mut(), mock_env(), "marketplace", "2.0.0")
+                .unwrap();
+
+            // Verify permissions were handled correctly during migration
+            let post_migration_permissions = contract
+                .query_permissions(deps.as_ref(), "actor", None, None)
+                .unwrap();
+            assert_eq!(post_migration_permissions.len(), 1);
+        }
     }
 }

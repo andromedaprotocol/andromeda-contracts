@@ -75,7 +75,7 @@ pub fn instantiate(
             deps.storage,
             SEND_CW20_ACTION,
             addr,
-            Permission::Local(LocalPermission::Whitelisted(None)),
+            Permission::Local(LocalPermission::whitelisted(None, None)),
         )?;
     }
 
@@ -99,9 +99,9 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     ensure_compatibility(&deps.as_ref(), "1.1.0")?;
-    ADOContract::default().migrate(deps, CONTRACT_NAME, CONTRACT_VERSION)
+    ADOContract::default().migrate(deps, env, CONTRACT_NAME, CONTRACT_VERSION)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
