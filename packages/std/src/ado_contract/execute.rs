@@ -272,7 +272,6 @@ impl ADOContract<'_> {
                 }
             }
         }
-
         set_contract_version(deps.branch().storage, contract_name, contract_version)?;
         Ok(Response::default())
     }

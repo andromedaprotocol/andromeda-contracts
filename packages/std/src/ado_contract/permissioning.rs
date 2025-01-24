@@ -431,12 +431,25 @@ impl ADOContract<'_> {
     }
 
     pub fn query_permissioned_actions(&self, deps: Deps) -> Result<Vec<String>, ContractError> {
-        let actions = self
+        let permissioned_actions = self
             .permissioned_actions
             .keys(deps.storage, None, None, Order::Ascending)
             .map(|p| p.unwrap())
             .collect::<Vec<String>>();
-        Ok(actions)
+
+        // Get unique actions from permissions map using values instead of keys
+        let actions_from_permissions: Vec<String> = permissions()
+            .range(deps.storage, None, None, Order::Ascending)
+            .map(|r| r.map(|(_, p)| p.action))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // Combine both sets of actions and deduplicate
+        let mut all_actions = permissioned_actions;
+        all_actions.extend(actions_from_permissions);
+        all_actions.sort();
+        all_actions.dedup();
+
+        Ok(all_actions)
     }
 
     pub fn query_permissioned_actors(
@@ -471,7 +484,7 @@ impl ADOContract<'_> {
                     .to_string()
             })
             .collect::<Vec<String>>();
-
+        println!("the actors are: {:?}", actors);
         Ok(actors)
     }
 }
