@@ -720,6 +720,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "andromeda-pow-cw721"
+version = "0.1.0-b.1"
+dependencies = [
+ "andromeda-app",
+ "andromeda-non-fungible-tokens",
+ "andromeda-std",
+ "andromeda-testing",
+ "cosmwasm-schema 1.5.8",
+ "cosmwasm-std 1.5.8",
+ "cw-multi-test",
+ "cw-orch",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw721 0.18.0",
+ "cw721-base 0.18.0",
+ "sha2 0.10.8",
+ "test-case",
+]
+
+[[package]]
 name = "andromeda-primitive"
 version = "2.1.0"
 dependencies = [
