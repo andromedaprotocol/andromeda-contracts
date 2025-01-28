@@ -7,6 +7,7 @@ use crate::{
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Coin};
+use cw20::Cw20ReceiveMsg;
 
 #[cw_serde]
 pub struct ChannelInfo {
@@ -39,6 +40,8 @@ pub enum ExecuteMsg {
     /// Receives an AMP Packet for relaying
     #[serde(rename = "amp_receive")]
     AMPReceive(AMPPkt),
+    // Cw20 entry point
+    Receive(Cw20ReceiveMsg),
     /// Constructs an AMPPkt with a given AMPMsg and sends it to the recipient
     Send {
         message: AMPMsg,
@@ -89,6 +92,11 @@ pub enum ExecuteMsg {
     Internal(InternalMsg),
     // Base message
     Ownership(OwnershipMessage),
+}
+
+#[cw_serde]
+pub enum Cw20HookMsg {
+    AmpReceive(AMPPkt),
 }
 
 #[cw_serde]

@@ -10,6 +10,7 @@ use cosmwasm_std::{
     entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
 };
 
+use crate::execute::handle_receive_cw20;
 use crate::ibc::{IBCLifecycleComplete, SudoMsg};
 use crate::reply::{
     on_reply_create_ado, on_reply_ibc_hooks_packet_send, on_reply_ibc_transfer,
@@ -91,6 +92,7 @@ pub fn execute(
             execute_env.env,
             packet,
         ),
+        ExecuteMsg::Receive(msg) => handle_receive_cw20(execute_env, msg),
         ExecuteMsg::Send { message } => execute::send(execute_env, message),
         ExecuteMsg::TriggerRelay {
             packet_sequence,

@@ -23,7 +23,7 @@ cw-storage-plus = { workspace = true }
 schemars = "0.8.10"
 serde = { workspace = true }
 semver = { workspace = true }
-cw20 = { version = "1.0.1" }
+cw20 = { workspace = true }
 cw20-base = { workspace = true, features = ["library"] }
 cw721-base = { workspace = true }
 cw-utils = { workspace = true }

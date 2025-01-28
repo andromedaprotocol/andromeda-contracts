@@ -2,12 +2,13 @@ use crate::ado_contract::ADOContract;
 use crate::common::encode_binary;
 use crate::error::ContractError;
 use crate::os::aos_querier::AOSQuerier;
-use crate::os::kernel::ExecuteMsg as KernelExecuteMsg;
+use crate::os::kernel::{Cw20HookMsg, ExecuteMsg as KernelExecuteMsg};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, wasm_execute, Addr, Binary, Coin, ContractInfoResponse, CosmosMsg, Deps, Empty,
-    MessageInfo, QuerierWrapper, QueryRequest, ReplyOn, SubMsg, WasmMsg, WasmQuery,
+    MessageInfo, QuerierWrapper, QueryRequest, ReplyOn, SubMsg, Uint128, WasmMsg, WasmQuery,
 };
+use cw20::Cw20ExecuteMsg;
 
 use super::addresses::AndrAddr;
 use super::ADO_DB_KEY;
@@ -404,6 +405,36 @@ impl AMPPkt {
                 contract_addr: address.into(),
                 msg: encode_binary(&KernelExecuteMsg::AMPReceive(self.clone()))?,
                 funds: funds.unwrap_or_default(),
+            },
+            id,
+        );
+        Ok(sub_msg)
+    }
+
+    pub fn to_sub_msg_cw20(
+        &self,
+        address: impl Into<String>,
+        funds: Vec<Coin>,
+        id: u64,
+    ) -> Result<SubMsg, ContractError> {
+        let contract_addr = funds[0].denom.clone();
+        // Verify that all funds are of the same CW20 token by checking if each fund's denom matches the contract address
+        if !funds.iter().all(|c| c.denom == contract_addr) {
+            return Err(ContractError::InvalidFunds {
+                msg: "All funds must be of the same CW20 token".to_string(),
+            });
+        }
+        // Collect total amount of funds
+        let total_amount = funds.iter().map(|c| c.amount).sum::<Uint128>();
+        let sub_msg = SubMsg::reply_always(
+            WasmMsg::Execute {
+                contract_addr,
+                msg: encode_binary(&Cw20ExecuteMsg::Send {
+                    contract: address.into(),
+                    amount: total_amount,
+                    msg: encode_binary(&Cw20HookMsg::AmpReceive(self.clone()))?,
+                })?,
+                funds: vec![],
             },
             id,
         );

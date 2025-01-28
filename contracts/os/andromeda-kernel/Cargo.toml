@@ -25,7 +25,8 @@ testing = ["cw-multi-test"]
 cosmwasm-std = { workspace = true, features = ["ibc3"] }
 cosmwasm-schema = { workspace = true }
 cw-storage-plus = { workspace = true }
-
+cw20 = { workspace = true }
+cw-utils = { workspace = true }
 serde-json-wasm = "1.0.1"
 osmosis-std-derive = "0.15.3"
 osmosis-std = "0.1.4"

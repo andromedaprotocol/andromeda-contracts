@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- CW20 support for kernel routing [(#723)](https://github.com/andromedaprotocol/andromeda-core/pull/723)
 - feat: Handle username on IBC packets [(#791)](https://github.com/andromedaprotocol/andromeda-core/pull/791)
 
 ### Changed
