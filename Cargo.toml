@@ -69,3 +69,8 @@ cw-orch = "=0.24.1"
 jsonschema-valid = { version = "0.5.2" }
 serde_json = { version = "1.0.138" }
 rstest = "0.24.0"
+sha2 = "0.10.8"
+bech32 = "0.9.1"
+ripemd = "0.1"
+hex = "0.4"
+secp256k1 = "0.30.0"

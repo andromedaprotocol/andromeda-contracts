@@ -85,6 +85,9 @@ pub enum ContractError {
     #[error("InvalidSender")]
     InvalidSender {},
 
+    #[error("InvalidSigner")]
+    InvalidSigner { signer: String },
+
     #[error("InvalidValidator")]
     InvalidValidator {},
 
@@ -180,6 +183,9 @@ pub enum ContractError {
 
     #[error("InvalidPrimitive")]
     InvalidPrimitive {},
+
+    #[error("InvalidPublickey")]
+    InvalidPublickey {},
 
     #[error("StillBonded")]
     StillBonded {},
