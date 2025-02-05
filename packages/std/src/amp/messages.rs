@@ -211,6 +211,7 @@ pub struct AMPCtx {
     origin_username: Option<AndrAddr>,
     pub previous_sender: String,
     pub id: u64,
+    pub previous_hops: Vec<CrossChainHop>,
 }
 
 impl AMPCtx {
@@ -226,6 +227,7 @@ impl AMPCtx {
             origin_username,
             previous_sender: previous_sender.into(),
             id,
+            previous_hops: vec![],
         }
     }
 
@@ -243,6 +245,47 @@ impl AMPCtx {
     pub fn get_previous_sender(&self) -> String {
         self.previous_sender.clone()
     }
+
+    /// Adds a cross-chain hop to the context's previous hops
+    pub fn add_hop(&mut self, hop: CrossChainHop) {
+        self.previous_hops.push(hop);
+    }
+
+    /// Adds a username
+    pub fn add_username(&mut self, username: AndrAddr) {
+        self.origin_username = Some(username);
+    }
+
+    pub fn try_add_origin_username(
+        &mut self,
+        querier: &QuerierWrapper,
+        vfs_address: &Addr,
+    ) -> Option<String> {
+        let origin = Addr::unchecked(self.get_origin());
+        if let Ok(Some(username)) = AOSQuerier::get_username(querier, vfs_address, &origin) {
+            if username != origin {
+                self.add_username(AndrAddr::from_string(username.clone()));
+                return Some(username);
+            }
+        }
+        None
+    }
+}
+
+#[cw_serde]
+pub struct CrossChainHop {
+    /// The username of the sender at this hop (if available)
+    pub username: Option<AndrAddr>,
+    /// The address of the sender at this hop
+    pub address: String,
+    /// The chain this hop originated from
+    pub from_chain: String,
+    /// The chain this hop was directed to
+    pub to_chain: String,
+    /// Any funds that were attached to this hop
+    pub funds: Vec<Coin>,
+    /// The IBC channels used for this hop
+    pub channel: String,
 }
 
 #[cw_serde]
@@ -270,46 +313,8 @@ impl AMPPkt {
     }
 
     /// Creates a new AMP Packet
-    pub fn new_with_username(
-        origin: impl Into<String>,
-        previous_sender: impl Into<String>,
-        messages: Vec<AMPMsg>,
-        username: Option<AndrAddr>,
-        id: Option<u64>,
-    ) -> AMPPkt {
-        AMPPkt {
-            messages,
-            ctx: AMPCtx::new(origin, previous_sender, id.unwrap_or(0), username),
-        }
-    }
-
-    /// Creates a new AMPPkt with an optional username, it tries to find the username of the origin and if it exists and is not the same as the origin, it will set the username in the context.
-    pub fn update_optional_username(
-        querier: &QuerierWrapper,
-        vfs_address: &Addr,
-        origin: &Addr,
-        contract_address: Addr,
-        id: Option<u64>,
-        messages: Vec<AMPMsg>,
-        username: Option<AndrAddr>,
-    ) -> AMPPkt {
-        if username.is_none() {
-            let username_addr = AOSQuerier::get_username(querier, vfs_address, origin);
-            match username_addr {
-                Ok(Some(username)) if username != *origin => AMPPkt::new_with_username(
-                    origin.clone(),
-                    contract_address,
-                    messages,
-                    Some(AndrAddr::from_string(username)),
-                    id,
-                ),
-                _ => {
-                    AMPPkt::new_with_username(origin.clone(), contract_address, messages, None, id)
-                }
-            }
-        } else {
-            AMPPkt::new_with_username(origin.clone(), contract_address, messages, username, id)
-        }
+    pub fn new_with_ctx(ctx: AMPCtx, messages: Vec<AMPMsg>) -> AMPPkt {
+        AMPPkt { messages, ctx }
     }
 
     pub fn with_origin(&self, origin: impl Into<String>) -> AMPPkt {
@@ -591,7 +596,7 @@ mod tests {
         let msg = AMPPkt::new("origin", "previoussender", vec![]);
 
         let memo = msg.to_json();
-        assert_eq!(memo, "{\"messages\":[],\"ctx\":{\"origin\":\"origin\",\"origin_username\":null,\"previous_sender\":\"previoussender\",\"id\":0}}".to_string());
+        assert_eq!(memo, "{\"messages\":[],\"ctx\":{\"origin\":\"origin\",\"origin_username\":null,\"previous_sender\":\"previoussender\",\"id\":0,\"previous_hops\":[]}}".to_string());
     }
 
     #[test]
@@ -599,6 +604,6 @@ mod tests {
         let msg = AMPPkt::new("origin", "previoussender", vec![]);
         let contract_addr = "contractaddr";
         let memo = msg.to_ibc_hooks_memo(contract_addr.to_string(), "callback".to_string());
-        assert_eq!(memo, "{\"wasm\":{\"contract\":\"contractaddr\",\"msg\":{\"amp_receive\":{\"messages\":[],\"ctx\":{\"origin\":\"origin\",\"origin_username\":null,\"previous_sender\":\"previoussender\",\"id\":0}}}},\"ibc_callback\":\"callback\"}".to_string());
+        assert_eq!(memo, "{\"wasm\":{\"contract\":\"contractaddr\",\"msg\":{\"amp_receive\":{\"messages\":[],\"ctx\":{\"origin\":\"origin\",\"origin_username\":null,\"previous_sender\":\"previoussender\",\"id\":0,\"previous_hops\":[]}}}},\"ibc_callback\":\"callback\"}".to_string());
     }
 }

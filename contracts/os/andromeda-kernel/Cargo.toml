@@ -1,6 +1,6 @@
 [package]
 name = "andromeda-kernel"
-version = "1.2.1-b.1"
+version = "1.2.1-b.2"
 authors = ["Connor Barr <crnbarr@gmail.com>"]
 edition = "2021"
 rust-version = "1.65.0"

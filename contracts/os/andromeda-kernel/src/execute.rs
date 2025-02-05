@@ -1,7 +1,7 @@
 use crate::ibc::{get_counterparty_denom, PACKET_LIFETIME};
 use andromeda_std::ado_contract::ADOContract;
 use andromeda_std::amp::addresses::AndrAddr;
-use andromeda_std::amp::messages::{AMPCtx, AMPMsg, AMPPkt};
+use andromeda_std::amp::messages::{AMPCtx, AMPMsg, AMPPkt, CrossChainHop};
 use andromeda_std::amp::{ADO_DB_KEY, VFS_KEY};
 use andromeda_std::common::context::ExecuteContext;
 use andromeda_std::common::has_coins_merged;
@@ -13,7 +13,7 @@ use andromeda_std::os::ibc_registry::path_to_hops;
 use andromeda_std::os::kernel::{ChannelInfo, IbcExecuteMsg, Ics20PacketInfo, InternalMsg};
 use andromeda_std::os::vfs::vfs_resolve_symlink;
 use cosmwasm_std::{
-    attr, ensure, from_json, to_json_binary, Addr, BankMsg, Binary, Coin, ContractInfoResponse,
+    attr, ensure, from_json, to_json_binary, BankMsg, Binary, Coin, ContractInfoResponse,
     CosmosMsg, DepsMut, Env, IbcMsg, MessageInfo, Response, StdAck, StdError, SubMsg, WasmMsg,
 };
 
@@ -102,7 +102,7 @@ fn handle_ibc_transfer_funds_reply(
 ) -> Result<Response, ContractError> {
     let ics20_packet_info = ics20_packet_info.clone();
     let chain =
-        ics20_packet_info
+        &ics20_packet_info
             .recipient
             .get_chain()
             .ok_or_else(|| ContractError::InvalidPacket {
@@ -146,11 +146,40 @@ fn handle_ibc_transfer_funds_reply(
             ),
         );
     }
+
+    let mut ctx = AMPCtx::new(
+        ics20_packet_info.sender.clone(),
+        env.contract.address,
+        0,
+        None,
+    );
+
+    // Add the orginal sender's username if it exists
+    let potential_username = ctx.try_add_origin_username(
+        &deps.querier,
+        &KERNEL_ADDRESSES.load(deps.storage, VFS_KEY)?,
+    );
+
+    // Create a new hop to be appended to the context
+    let hop = CrossChainHop {
+        username: potential_username.as_ref().map(AndrAddr::from_string),
+        address: ics20_packet_info.sender.clone(),
+        from_chain: CURR_CHAIN.load(deps.storage)?,
+        to_chain: chain.to_string(),
+        funds: vec![adjusted_funds.clone()],
+        channel: channel.clone(),
+    };
+
+    // Add the new hop to the context
+    ctx.add_hop(hop);
+
     let kernel_msg = IbcExecuteMsg::SendMessageWithFunds {
         recipient: AndrAddr::from_string(ics20_packet_info.recipient.clone().get_raw_path()),
-        message: ics20_packet_info.message.clone(),
+        message: ics20_packet_info.message,
         funds: adjusted_funds,
         original_sender: ics20_packet_info.sender,
+        original_sender_username: potential_username.map(AndrAddr::from_string),
+        previous_hops: ctx.previous_hops,
     };
     let msg = IbcMsg::SendPacket {
         channel_id: channel.clone(),
@@ -164,7 +193,7 @@ fn handle_ibc_transfer_funds_reply(
         .add_attribute("relay_outcome", "success")
         .add_attribute("relay_sequence", sequence.to_string())
         .add_attribute("relay_channel", ics20_packet_info.channel)
-        .add_attribute("relay_chain", chain)
+        .add_attribute("relay_chain", chain.to_string())
         .add_attribute("receiving_kernel_address", channel_info.kernel_address))
 }
 
@@ -781,7 +810,10 @@ impl MsgHandler {
         channel_info: ChannelInfo,
     ) -> Result<Response, ContractError> {
         let AMPMsg {
-            recipient, message, ..
+            recipient,
+            message,
+            funds,
+            ..
         } = self.message();
         ensure!(
             !Binary::default().eq(message),
@@ -789,44 +821,62 @@ impl MsgHandler {
                 error: Some("Cannot send an empty message without funds via IBC".to_string())
             }
         );
-        let chain = recipient.get_chain().unwrap();
+        let destination_chain = recipient.get_chain().unwrap();
         let channel = if let Some(direct_channel) = channel_info.direct_channel_id {
             Ok::<String, ContractError>(direct_channel)
         } else {
             return Err(ContractError::InvalidPacket {
-                error: Some(format!("Channel not found for chain {chain}")),
+                error: Some(format!("Channel not found for chain {destination_chain}")),
             });
         }?;
         let vfs_address = KERNEL_ADDRESSES.load(deps.storage, VFS_KEY).unwrap();
+        let current_chain = CURR_CHAIN.load(deps.storage)?;
+
         let ctx = ctx.map_or_else(
             || {
-                let origin = info.sender.clone();
                 let amp_msg = AMPMsg::new(recipient.clone().get_raw_path(), message.clone(), None);
-                AMPPkt::update_optional_username(
-                    &deps.querier,
-                    &vfs_address,
-                    &origin,
-                    env.contract.address.clone(),
-                    None,
-                    vec![amp_msg],
-                    None,
-                )
-            },
-            |ctx| {
-                let origin = Addr::unchecked(ctx.ctx.get_origin());
-                let mut amp_packet = AMPPkt::update_optional_username(
-                    &deps.querier,
-                    &vfs_address,
-                    &origin,
-                    env.contract.address.clone(),
-                    Some(ctx.ctx.id),
-                    ctx.messages.clone(),
-                    ctx.ctx.get_origin_username(),
-                );
+                let mut ctx = AMPCtx::new(info.sender, env.contract.address, 0, None);
 
-                amp_packet.messages[0].recipient =
+                // Add the orginal sender's username if it exists
+                let potential_username = ctx.try_add_origin_username(&deps.querier, &vfs_address);
+
+                // Create a new hop to be appended to the context
+                let hop = CrossChainHop {
+                    username: potential_username.map(AndrAddr::from_string),
+                    address: ctx.get_origin(),
+                    from_chain: current_chain.to_string(),
+                    to_chain: destination_chain.to_string(),
+                    funds: funds.to_vec(),
+                    channel: channel.clone(),
+                };
+
+                // Add the new hop to the context
+                ctx.add_hop(hop);
+
+                AMPPkt::new_with_ctx(ctx, vec![amp_msg])
+            },
+            |mut ctx| {
+                // Add the orginal sender's username if it exists
+                let potential_username =
+                    ctx.ctx.try_add_origin_username(&deps.querier, &vfs_address);
+
+                // Create a new hop to be appended to the context
+                let hop = CrossChainHop {
+                    username: potential_username.map(AndrAddr::from_string),
+                    address: ctx.ctx.get_origin(),
+                    from_chain: current_chain.to_string(),
+                    to_chain: destination_chain.to_string(),
+                    funds: funds.to_vec(),
+                    channel: channel.clone(),
+                };
+
+                // Add the new hop to the context
+                ctx.ctx.add_hop(hop);
+
+                // Remove the recipient's prepended chain reference
+                ctx.messages[0].recipient =
                     AndrAddr::from_string(recipient.clone().get_raw_path().to_string());
-                amp_packet
+                ctx
             },
         );
 
@@ -842,7 +892,7 @@ impl MsgHandler {
             .add_attribute(format!("method:{sequence}"), "execute_send_message")
             .add_attribute(format!("channel:{sequence}"), channel)
             .add_attribute("receiving_kernel_address:{}", channel_info.kernel_address)
-            .add_attribute("chain:{}", chain)
+            .add_attribute("chain:{}", destination_chain)
             .add_message(msg))
     }
 
